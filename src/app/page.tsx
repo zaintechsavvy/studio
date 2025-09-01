@@ -9,6 +9,13 @@ import StationMap from '@/components/voltsage/StationMap';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
+import dynamic from 'next/dynamic';
+
+const DynamicStationMap = dynamic(() => import('@/components/voltsage/StationMap'), {
+  ssr: false,
+  loading: () => <div className="flex h-full w-full items-center justify-center bg-muted"><p>Loading Map...</p></div>
+});
+
 
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
@@ -97,7 +104,7 @@ export default function VoltsageApp() {
             />
           </Sidebar>
           <SidebarInset>
-            <StationMap
+            <DynamicStationMap
               stations={filteredStations}
               selectedStation={selectedStation}
               onSelectStation={handleSelectStation}

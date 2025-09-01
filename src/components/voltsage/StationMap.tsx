@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import type { Map as MapInstance } from '@vis.gl/react-google-maps';
-import { ChargingStation } from '@/lib/types';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import type { ChargingStation } from '@/lib/types';
 import { motion } from 'framer-motion';
+import { Button } from '../ui/button';
+
+// Fix for default icon path issue with webpack
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 interface StationMapProps {
   stations: ChargingStation[] | null;
@@ -12,86 +22,79 @@ interface StationMapProps {
   onSelectStation: (stationId: string | null) => void;
 }
 
-// IMPORTANT: You must add your Google Maps API key to your environment variables.
-// Create a .env.local file in the root of your project and add the following line:
-// NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_API_KEY_HERE"
-// You can get a key from the Google Cloud Console: https://console.cloud.google.com/
+const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+};
 
-const MAP_ID = 'voltsage_map';
+const CustomMarker = ({ station, isSelected, onSelectStation }: { station: ChargingStation, isSelected: boolean, onSelectStation: (id: string) => void }) => {
+  const markerRef = useRef<L.Marker>(null);
+
+  const icon = new L.Icon({
+    iconUrl: isSelected ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png' : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[station.latitude, station.longitude]}
+      icon={icon}
+      eventHandlers={{
+        click: () => {
+          onSelectStation(station.id);
+        },
+      }}
+    >
+      <Popup>
+        <div>
+          <h3 className="font-bold">{station.name}</h3>
+          <p>{station.address}</p>
+          <Button size="sm" className="mt-2" onClick={() => onSelectStation(station.id)}>View Details</Button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+};
+
 
 export default function StationMap({ stations, selectedStation, onSelectStation }: StationMapProps) {
-  const mapRef = useRef<MapInstance | null>(null);
+  const defaultCenter: [number, number] = [37.7749, -122.4194];
 
-  const defaultCenter = { lat: 37.7749, lng: -122.4194 }; // Default to San Francisco
-  
-  const mapCenter = useMemo(() => {
+  const mapCenter = useMemo((): [number, number] => {
     if (selectedStation) {
-      return { lat: selectedStation.latitude, lng: selectedStation.longitude };
+      return [selectedStation.latitude, selectedStation.longitude];
     }
     if (stations && stations.length > 0) {
-      // Center on the first station of a new search
-      return { lat: stations[0].latitude, lng: stations[0].longitude };
+      return [stations[0].latitude, stations[0].longitude];
     }
     return defaultCenter;
   }, [selectedStation, stations]);
-  
-  useEffect(() => {
-    if (mapRef.current) {
-        mapRef.current.panTo(mapCenter);
-    }
-  }, [mapCenter]);
 
-  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-muted">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold">Google Maps API Key Missing</h2>
-          <p className="text-muted-foreground">Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file.</p>
-        </div>
-      </div>
-    );
-  }
+  const zoom = selectedStation ? 14 : 11;
 
   return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
-      <Map
-        ref={mapRef}
-        defaultCenter={defaultCenter}
-        center={mapCenter}
-        defaultZoom={11}
-        gestureHandling={'greedy'}
-        disableDefaultUI={true}
-        mapId={MAP_ID}
-        className="h-full w-full"
-      >
-        {stations?.map(station => (
-          <AdvancedMarker
+    <MapContainer center={mapCenter} zoom={zoom} scrollWheelZoom={true} className="h-full w-full z-0">
+      <ChangeView center={mapCenter} zoom={zoom} />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {stations?.map(station => (
+         <CustomMarker 
             key={station.id}
-            position={{ lat: station.latitude, lng: station.longitude }}
-            onClick={() => onSelectStation(station.id)}
-          >
-            <motion.div
-              animate={{ scale: selectedStation?.id === station.id ? 1.5 : 1 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-            >
-              <Pin
-                background={selectedStation?.id === station.id ? 'var(--color-primary)' : '#FF5252'}
-                borderColor={selectedStation?.id === station.id ? 'var(--color-accent)' : '#B71C1C'}
-                glyphColor={selectedStation?.id === station.id ? 'hsl(var(--primary-foreground))' : '#FFFFFF'}
-              />
-            </motion.div>
-          </AdvancedMarker>
-        ))}
-      </Map>
-    </APIProvider>
+            station={station}
+            isSelected={selectedStation?.id === station.id}
+            onSelectStation={onSelectStation}
+        />
+      ))}
+    </MapContainer>
   );
 }
-
-// Custom hook to use in other components if needed, e.g. for calculating average location
-function useMemo<T>(factory: () => T, deps: React.DependencyList | undefined): T {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    return React.useMemo(factory, deps);
-}
-
-// Add React to dependencies if not already present
-import React from 'react';
