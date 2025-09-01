@@ -38,24 +38,41 @@ export async function searchByDestination(input: SearchByDestinationInput): Prom
   return searchByDestinationFlow(input);
 }
 
+const getChargingStationsTool = ai.defineTool(
+  {
+    name: 'getChargingStationsTool',
+    description: 'Get a list of EV charging stations near a given location.',
+    inputSchema: z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+    }),
+    outputSchema: SearchByDestinationOutputSchema,
+  },
+  async (input) => {
+    // In a real app, you would fetch this from a real API.
+    // This is a mock implementation for demonstration purposes.
+    console.log(`Fetching stations near ${input.latitude}, ${input.longitude}`);
+    return {
+      chargingStations: [
+        { name: "ChargePoint City Hall", address: "123 Main St, Anytown, USA", latitude: 34.0522, longitude: -118.2437, network: "ChargePoint", speed: "50kW", connectorTypes: ["J1772", "CHAdeMO"], availability: "2/4 Available", pricing: "$0.25/kWh" },
+        { name: "EVgo Super Fast", address: "456 Oak Ave, Anytown, USA", latitude: 34.055, longitude: -118.25, network: "EVgo", speed: "150kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "3/4 Available", pricing: "$0.35/kWh" },
+        { name: "Electrify America Hub", address: "789 Pine Ln, Anytown, USA", latitude: 34.05, longitude: -118.24, network: "Electrify America", speed: "350kW", connectorTypes: ["CCS"], availability: "4/4 Available", pricing: "$0.43/kWh" },
+        { name: "Tesla Supercharger Central", address: "101 Maple Dr, Anytown, USA", latitude: 34.06, longitude: -118.245, network: "Tesla", speed: "250kW", connectorTypes: ["Tesla"], availability: "8/12 Available", pricing: "$0.28/kWh" }
+      ]
+    };
+  }
+);
+
+
 const prompt = ai.definePrompt({
   name: 'searchByDestinationPrompt',
   input: {schema: SearchByDestinationInputSchema},
   output: {schema: SearchByDestinationOutputSchema},
-  prompt: `You are an expert EV charging station finder. Given a destination address, you will find a list of charging stations near that destination.
+  tools: [getChargingStationsTool],
+  prompt: `You are an expert EV charging station finder. Given a destination address, find the latitude and longitude and then use the getChargingStationsTool to find charging stations.
 
   Destination: {{{destination}}}
-
-  Return a JSON array of charging stations with the following information for each:
-  - name
-  - address
-  - latitude
-  - longitude
-  - network
-  - speed
-  - connectorTypes (as an array of strings)
-  - availability
-  - pricing`,
+`,
 });
 
 const searchByDestinationFlow = ai.defineFlow(
