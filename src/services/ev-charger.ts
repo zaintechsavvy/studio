@@ -22,7 +22,7 @@ export async function getChargingStations({
     throw new Error("API key is not configured.");
   }
   
-  const url = `https://api.api-ninjas.com/v1/evchargers?latitude=${lat}&longitude=${lon}&radius=50`;
+  const url = `https://api.api-ninjas.com/v1/evchargers?lat=${lat}&lon=${lon}&radius=50`;
 
   try {
     const response = await fetch(url, {
