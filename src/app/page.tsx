@@ -1,20 +1,12 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useRatings } from '@/hooks/use-ratings';
-import { Skeleton } from '@/components/ui/skeleton';
-
-const Map = dynamic(() => import('@/components/voltsage/Map'), { 
-  ssr: false,
-  loading: () => <Skeleton className="w-full h-full" />,
-});
-
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -26,7 +18,6 @@ export type FilterOptions = {
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194]);
   const [isLoading, setIsLoading] = useState(true);
   const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
@@ -49,11 +40,6 @@ export default function VoltsageApp() {
     setStations(null);
     setIsListVisible(true);
     
-    const [latStr, lonStr] = destination.split(',');
-    const lat = parseFloat(latStr);
-    const lon = parseFloat(lonStr);
-    setMapCenter([lat, lon]);
-
     const { chargingStations, error } = await handleSearch({ destination });
 
     if (error) {
@@ -103,11 +89,7 @@ export default function VoltsageApp() {
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-    const station = stations?.find(s => s.id === stationId);
-    if (station) {
-      setMapCenter([station.latitude, station.longitude]);
-    }
-  }, [stations]);
+  }, []);
 
   const handleBackToList = useCallback(() => {
     setSelectedStationId(null);
@@ -160,41 +142,26 @@ export default function VoltsageApp() {
   }, [stations, activeTab, isFavorite, filters]);
 
   return (
-      <div className="relative flex h-dvh w-full flex-col bg-background font-sans">
-        <div className="relative z-10 flex flex-1 overflow-hidden">
-          <div className="flex w-full h-full max-h-full">
-            <div className="w-full max-w-md shrink-0 h-full border-r border-border bg-background z-20">
-              <div className="flex flex-col h-full shadow-lg">
-                <SidebarContent
-                  stations={displayedStations}
-                  selectedStationId={selectedStationId}
-                  onSelectStation={handleSelectStation}
-                  isLoading={isLoading}
-                  onSearch={handleSearchSubmit}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={toggleFavorite}
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  allConnectorTypes={allConnectorTypes}
-                  allNetworks={allNetworks}
-                  ratings={ratings}
-                  onRate={setRating}
-                />
-              </div>
-            </div>
-            
-            <div className="flex-1 h-full hidden md:flex flex-col">
-              <Map
-                center={mapCenter}
-                stations={displayedStations}
-                selectedStationId={selectedStationId}
-                onSelectStation={handleSelectStation}
-              />
-            </div>
-          </div>
-        </div>
+    <div className="flex h-dvh w-full justify-center items-center bg-gray-100 dark:bg-gray-900">
+      <div className="w-full max-w-md h-full max-h-dvh bg-background shadow-2xl rounded-2xl overflow-hidden">
+          <SidebarContent
+            stations={displayedStations}
+            selectedStationId={selectedStationId}
+            onSelectStation={handleSelectStation}
+            isLoading={isLoading}
+            onSearch={handleSearchSubmit}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            filters={filters}
+            onFiltersChange={setFilters}
+            allConnectorTypes={allConnectorTypes}
+            allNetworks={allNetworks}
+            ratings={ratings}
+            onRate={setRating}
+          />
       </div>
+    </div>
   );
 }

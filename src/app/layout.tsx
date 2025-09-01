@@ -1,6 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import 'leaflet/dist/leaflet.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
