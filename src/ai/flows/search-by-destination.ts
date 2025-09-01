@@ -79,7 +79,7 @@ const getChargingStationsTool = ai.defineTool(
         
         let connectorTypes: string[] = [];
         if (station.connections && station.connections.length > 0) {
-          connectorTypes = [...new Set(station.connections.map((c: any) => c.type_name).filter(Boolean))];
+          connectorTypes = [...new Set(station.connections.map((c: any) => c.type_name).filter(Boolean) as string[])];
         }
         if (connectorTypes.length === 0) {
           connectorTypes.push('Unknown');
@@ -126,7 +126,7 @@ const searchByDestinationFlow = ai.defineFlow(
     inputSchema: SearchByDestinationInputSchema,
     outputSchema: SearchByDestinationOutputSchema,
   },
-  async input => {
+  async (input) => {
     // Directly call the tool since the logic is straightforward now.
     return getChargingStationsTool({ query: input.destination });
   }
