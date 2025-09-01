@@ -4,14 +4,14 @@ import type { ChargingStation } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import StationListItem from './StationListItem';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Button } from '@/components/ui/button';
-import { Filter } from 'lucide-react';
+import { Filter, SlidersHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -30,15 +30,9 @@ interface StationListProps {
 }
 
 const ListSkeleton = () => (
-  <div className="space-y-4 p-4">
-    {Array.from({ length: 5 }).map((_, i) => (
-      <div key={i} className="flex items-center space-x-4">
-        <Skeleton className="h-12 w-12 rounded-lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[200px]" />
-          <Skeleton className="h-4 w-[150px]" />
-        </div>
-      </div>
+  <div className="space-y-3 p-4">
+    {Array.from({ length: 7 }).map((_, i) => (
+      <Skeleton key={i} className="h-24 w-full rounded-xl bg-white/50" />
     ))}
   </div>
 );
@@ -54,9 +48,6 @@ export default function StationList({
   onFiltersChange,
   allConnectorTypes
 }: StationListProps) {
-  if (isLoading) {
-    return <ListSkeleton />;
-  }
   
   const handleConnectorChange = (connector: string) => {
     onFiltersChange({
@@ -71,38 +62,70 @@ export default function StationList({
     onFiltersChange({ ...filters, minSpeed: value[0] });
   };
 
+  const renderStationList = (list: ChargingStation[] | null, emptyTitle: string, emptyDescription: string) => {
+    if (!list || list.length === 0) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+          <div className="glass-card p-8">
+            <h3 className="text-lg font-semibold">{emptyTitle}</h3>
+            <p className="text-sm text-muted-foreground">{emptyDescription}</p>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-3 p-4">
+        {list.map(station => (
+          <StationListItem
+            key={station.id}
+            station={station}
+            onSelectStation={onSelectStation}
+            isFavorite={isFavorite(station.id)}
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col">
-       <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'nearby' | 'favorites')} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="nearby">Nearby</TabsTrigger>
-          <TabsTrigger value="favorites">Favorites</TabsTrigger>
-        </TabsList>
-        <Collapsible className="border-b">
+       <div className="p-4">
+         <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'nearby' | 'favorites')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-white/40 h-12 rounded-xl">
+              <TabsTrigger value="nearby" className="h-full rounded-lg text-base data-[state=active]:bg-white data-[state=active]:shadow-lg">Nearby</TabsTrigger>
+              <TabsTrigger value="favorites" className="h-full rounded-lg text-base data-[state=active]:bg-white data-[state=active]:shadow-lg">Favorites</TabsTrigger>
+            </TabsList>
+         </Tabs>
+       </div>
+
+       <Collapsible className="border-y border-white/20 px-4">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start px-4 py-3 text-sm font-semibold">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
+            <Button variant="ghost" className="w-full justify-between h-14 text-base">
+              <span className="flex items-center gap-2 font-semibold">
+                <SlidersHorizontal className="h-5 w-5" />
+                Filters
+              </span>
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="p-4 space-y-4">
+          <CollapsibleContent className="py-4 space-y-6">
             <div>
-              <h4 className="font-semibold mb-2">Connector Type</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <h4 className="font-semibold mb-3 text-base">Connector Type</h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               {allConnectorTypes.map(connector => (
-                <div key={connector} className="flex items-center space-x-2">
+                <div key={connector} className="flex items-center space-x-3">
                   <Checkbox 
                     id={connector} 
+                    className="h-5 w-5"
                     checked={filters.connectorTypes.includes(connector)}
                     onCheckedChange={() => handleConnectorChange(connector)}
                   />
-                  <Label htmlFor={connector}>{connector}</Label>
+                  <Label htmlFor={connector} className="text-base">{connector}</Label>
                 </div>
               ))}
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Minimum Speed (kW)</h4>
+              <h4 className="font-semibold mb-3 text-base">Minimum Speed</h4>
               <div className="flex items-center gap-4">
                 <Slider
                   min={0}
@@ -111,62 +134,21 @@ export default function StationList({
                   value={[filters.minSpeed]}
                   onValueChange={handleSpeedChange}
                 />
-                <span className="font-semibold w-20 text-right">{filters.minSpeed} kW</span>
+                <span className="font-semibold w-24 text-right text-base">{filters.minSpeed} kW</span>
               </div>
             </div>
           </CollapsibleContent>
         </Collapsible>
-        <TabsContent value="nearby">
-          <ScrollArea className="flex-1" style={{ height: 'calc(100vh - 250px)' }}>
-            {stations && stations.length > 0 ? (
-              <div className="space-y-2 p-2">
-                {stations.map(station => (
-                  <StationListItem
-                    key={station.id}
-                    station={station}
-                    onSelectStation={onSelectStation}
-                    isFavorite={isFavorite(station.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center p-8 text-center">
-                <div>
-                  <h3 className="text-lg font-semibold">No Nearby Stations Found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Try adjusting your filters or searching a different area.
-                  </p>
-                </div>
-              </div>
-            )}
-          </ScrollArea>
-        </TabsContent>
-         <TabsContent value="favorites">
-          <ScrollArea className="flex-1" style={{ height: 'calc(100vh - 250px)' }}>
-            {stations && stations.length > 0 ? (
-              <div className="space-y-2 p-2">
-                {stations.map(station => (
-                  <StationListItem
-                    key={station.id}
-                    station={station}
-                    onSelectStation={onSelectStation}
-                    isFavorite={isFavorite(station.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-               <div className="flex h-full items-center justify-center p-8 text-center">
-                <div>
-                  <h3 className="text-lg font-semibold">No Favorites Yet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Save stations to see them here.
-                  </p>
-                </div>
-              </div>
-            )}
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
+      
+      <ScrollArea className="flex-1">
+        {isLoading ? (
+           <ListSkeleton />
+        ) : (
+          activeTab === 'nearby'
+            ? renderStationList(stations, 'No Nearby Stations', 'Try adjusting filters or searching a new area.')
+            : renderStationList(stations, 'No Favorites Yet', 'Save stations to see them here.')
+        )}
+      </ScrollArea>
     </div>
   );
 }

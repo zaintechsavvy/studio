@@ -76,27 +76,15 @@ const getChargingStationsTool = ai.defineTool(
       // Transform the API response to match our ChargingStationSchema
       const chargingStations = data.map((station: any) => {
         
-        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types)] : ['Unknown'];
+        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types)].filter(Boolean) : ['Unknown'];
 
         let speed = "N/A";
         if (station.ev_dc_fast_num > 0) {
-            speed = "DC Fast";
+            speed = "DC Fast Charging";
         } else if (station.ev_level2_evse_num > 0) {
             speed = "Level 2";
         } else if (station.ev_level1_evse_num > 0) {
             speed = "Level 1";
-        }
-
-        // The API returns kW as a number, let's make it a string like "50kW"
-        // Find the max power available
-        let maxPower = 0;
-        if(station.ev_dc_fast_num > 0 && station.ev_network_web) {
-          // Placeholder, real APIs might provide this
-          maxPower = 150; 
-        } else if (station.ev_level2_evse_num > 0) {
-          maxPower = 7;
-        } else {
-          maxPower = 2;
         }
 
         return {
@@ -105,9 +93,9 @@ const getChargingStationsTool = ai.defineTool(
           latitude: station.latitude,
           longitude: station.longitude,
           network: station.ev_network || 'Unknown',
-          speed: station.ev_dc_fast_num > 0 ? `${station.ev_dc_fast_num}x DC Fast` : (station.ev_level2_evse_num ? `${station.ev_level2_evse_num}x Level 2`: `Level 1`),
+          speed: speed,
           connectorTypes: connectorTypes,
-          availability: station.access_days_time || '24/7',
+          availability: station.access_days_time || 'Unknown',
           pricing: station.ev_pricing || 'Varies',
         };
       });

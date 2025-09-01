@@ -1,7 +1,6 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { SidebarHeader, SidebarContent as SidebarContentArea, SidebarFooter } from '@/components/ui/sidebar';
 import type { ChargingStation } from '@/lib/types';
 import SearchForm from '@/components/voltsage/SearchForm';
 import StationList from '@/components/voltsage/StationList';
@@ -45,17 +44,17 @@ export default function SidebarContent({
   const { ratings, setRating } = useRatings();
 
   const animationVariants = {
-    initial: { opacity: 0, x: -50 },
+    initial: { opacity: 0, x: -30 },
     animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 50 },
+    exit: { opacity: 0, x: 30 },
   };
 
   return (
-    <>
-      <SidebarHeader>
-        <SearchForm onSearch={onSearch} isLoading={isLoading} />
-      </SidebarHeader>
-      <SidebarContentArea className="p-0">
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b border-white/20">
+        <SearchForm onSearch={onSearch} isLoading={isLoading && !stations} />
+      </div>
+      <div className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
           {selectedStation ? (
             <motion.div
@@ -64,7 +63,7 @@ export default function SidebarContent({
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.3 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="h-full"
             >
               <StationDetails
@@ -83,7 +82,7 @@ export default function SidebarContent({
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.3 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="h-full"
             >
               <StationList
@@ -100,12 +99,10 @@ export default function SidebarContent({
             </motion.div>
           )}
         </AnimatePresence>
-      </SidebarContentArea>
-      <SidebarFooter>
-        <p className="text-center text-xs text-muted-foreground">
-          Powered by Voltsage
-        </p>
-      </SidebarFooter>
-    </>
+      </div>
+      <div className="p-2 text-center text-xs text-muted-foreground border-t border-white/20">
+        <p>Powered by Voltsage</p>
+      </div>
+    </div>
   );
 }

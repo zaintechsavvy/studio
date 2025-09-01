@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
+import Image from 'next/image';
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -17,7 +17,7 @@ export type FilterOptions = {
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
@@ -28,7 +28,7 @@ export default function VoltsageApp() {
     minSpeed: 0,
   });
 
-  const handleSearchSubmit = async (destination: string) => {
+  const handleSearchSubmit = useCallback(async (destination: string) => {
     if (!destination) return;
     
     setIsLoading(true);
@@ -44,11 +44,11 @@ export default function VoltsageApp() {
         title: 'Search Failed',
         description: error,
       });
-      setStations(null);
+      setStations([]);
     } else {
       const stationsWithIds = chargingStations.map((station, index) => ({
         ...station,
-        id: `${station.name}-${station.latitude}-${station.longitude}`,
+        id: `${station.latitude}-${station.longitude}-${index}`,
       }));
       setStations(stationsWithIds);
       if (stationsWithIds.length === 0) {
@@ -59,14 +59,14 @@ export default function VoltsageApp() {
       }
     }
     setIsLoading(false);
-  };
+  }, [toast]);
   
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          handleSearchSubmit(`${latitude}, ${longitude}`);
+          handleSearchSubmit(`${latitude},${longitude}`);
         },
         (error) => {
           console.error("Geolocation error:", error);
@@ -75,10 +75,13 @@ export default function VoltsageApp() {
             title: "Geolocation failed",
             description: "Could not get your location. Please enter a destination manually.",
           });
-          // Fallback to a default search or let user search manually
-          if (!stations) {
-            handleSearchSubmit("New York, NY");
-          }
+          // Fallback to a default search 
+          handleSearchSubmit("New York, NY");
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     } else {
@@ -87,11 +90,9 @@ export default function VoltsageApp() {
         description: "Your browser does not support geolocation. Please enter a destination manually.",
       });
       // Fallback to a default search
-       if (!stations) {
-          handleSearchSubmit("New York, NY");
-       }
+      handleSearchSubmit("New York, NY");
     }
-  }, []); // Run once on component mount
+  }, [handleSearchSubmit, toast]);
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
@@ -108,20 +109,23 @@ export default function VoltsageApp() {
     [stations, selectedStationId]
   );
   
-  const filteredStations = useMemo(() => {
+  const displayedStations = useMemo(() => {
     if (!stations) return null;
-    let currentStations = stations;
-
-    if (activeTab === 'favorites') {
-      currentStations = stations.filter(station => isFavorite(station.id));
-    }
+    let currentStations = activeTab === 'favorites'
+      ? stations.filter(station => isFavorite(station.id))
+      : stations;
     
     return currentStations.filter(station => {
       const connectorMatch = filters.connectorTypes.length === 0 || 
         filters.connectorTypes.some(ct => station.connectorTypes.includes(ct));
       
-      const stationSpeed = parseInt(station.speed.replace('kW', ''));
-      const speedMatch = isNaN(stationSpeed) || stationSpeed >= filters.minSpeed;
+      let stationMaxPower = 0;
+      if (station.speed.includes('DC Fast')) {
+        stationMaxPower = 150; // Approximation
+      } else if (station.speed.includes('Level 2')) {
+        stationMaxPower = 7;
+      }
+      const speedMatch = stationMaxPower >= filters.minSpeed;
       
       return connectorMatch && speedMatch;
     });
@@ -131,35 +135,57 @@ export default function VoltsageApp() {
   const allConnectorTypes = useMemo(() => {
     if (!stations) return [];
     const allTypes = new Set<string>();
-    stations.forEach(s => s.connectorTypes.forEach(ct => allTypes.add(ct)));
+    stations.forEach(s => s.connectorTypes.forEach(ct => {
+      if(ct && ct !== 'Unknown') allTypes.add(ct)
+    }));
     return Array.from(allTypes);
   }, [stations]);
 
   return (
-    <SidebarProvider>
-      <div className="relative flex h-dvh w-full flex-col bg-background">
-        <Header />
-        <div className="flex flex-1 overflow-hidden">
-          <div className="mx-auto w-full max-w-md border-x">
-             <SidebarContent
-              stations={filteredStations}
-              selectedStation={selectedStation}
-              isLoading={isLoading}
-              isListVisible={isListVisible}
-              onSearch={handleSearchSubmit}
-              onSelectStation={handleSelectStation}
-              onBackToList={handleBackToList}
-              isFavorite={isFavorite}
-              onToggleFavorite={toggleFavorite}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              filters={filters}
-              onFiltersChange={setFilters}
-              allConnectorTypes={allConnectorTypes}
-            />
+      <div className="relative flex h-dvh w-full flex-col bg-background font-sans">
+        <Image
+          src="https://picsum.photos/1920/1080"
+          alt="Abstract background"
+          fill
+          quality={80}
+          className="object-cover z-0"
+          data-ai-hint="abstract background"
+        />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-0" />
+
+        <div className="relative z-10 flex flex-1 overflow-hidden p-4">
+          <div className="flex w-full h-full max-h-full">
+            
+            {/* Sidebar */}
+            <div className="w-full max-w-sm shrink-0 h-full">
+              <div className="glass-card flex flex-col h-full">
+                <SidebarContent
+                  stations={displayedStations}
+                  selectedStation={selectedStation}
+                  isLoading={isLoading}
+                  isListVisible={isListVisible}
+                  onSearch={handleSearchSubmit}
+                  onSelectStation={handleSelectStation}
+                  onBackToList={handleBackToList}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  allConnectorTypes={allConnectorTypes}
+                />
+              </div>
+            </div>
+
+            {/* Main content placeholder */}
+            <div className="flex-1 ml-4 h-full hidden md:flex">
+              <div className="glass-card w-full h-full flex items-center justify-center">
+                <Header />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </SidebarProvider>
   );
 }
