@@ -1,6 +1,6 @@
 'use server';
 
-import { getChargingStations } from '@/services/nrel-api';
+import { getChargingStations } from '@/services/open-charge-map-api';
 import type { ChargingStation } from '@/lib/types';
 import { z } from 'zod';
 

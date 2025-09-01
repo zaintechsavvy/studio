@@ -15,6 +15,7 @@ export interface ChargingStation {
   accessType: 'public' | 'private' | 'unknown';
   operatingHours: string | null;
   facilityType: string | null;
+  status?: string;
 }
 
 export interface Connector {
