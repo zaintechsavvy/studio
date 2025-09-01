@@ -105,7 +105,7 @@ export default function SidebarContent({
         </AnimatePresence>
       </div>
       <div className="p-2 text-center text-xs text-muted-foreground border-t border-border">
-        <p>Data from NREL. Use for informational purposes only.</p>
+        <p>Data from OpenChargeMap. Use for informational purposes only.</p>
       </div>
     </div>
   );

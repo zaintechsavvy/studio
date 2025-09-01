@@ -75,7 +75,7 @@ export default function VoltsageApp() {
             title: "Geolocation failed",
             description: "Could not get your location. Searching default location.",
           });
-          handleSearchSubmit('37.7749,-122.4194');
+          handleSearchSubmit('37.7749,-122.4194'); // Default to San Francisco
         }
       );
     } else {
@@ -83,7 +83,7 @@ export default function VoltsageApp() {
         title: "Geolocation not supported",
         description: "Your browser does not support geolocation. Searching default location.",
       });
-      handleSearchSubmit('37.7749,-122.4194');
+      handleSearchSubmit('37.7749,-122.4194'); // Default to San Francisco
     }
   }, [handleSearchSubmit, toast]);
 

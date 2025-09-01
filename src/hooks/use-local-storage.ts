@@ -3,19 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
-
-  useEffect(() => {
-    // This effect runs only on the client, after the initial render.
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    // This part runs only once on component mount, on the client side.
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
     try {
       const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item));
-      }
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
+      console.warn(`Error reading localStorage key “${key}”:`, error);
+      return initialValue;
     }
-  }, [key]);
+  });
 
   const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
@@ -25,9 +25,15 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
-      console.warn(`Error setting localStorage key "${key}":`, error);
+      console.warn(`Error setting localStorage key “${key}”:`, error);
     }
   }, [key, storedValue]);
+
+  useEffect(() => {
+    // This effect can be used to synchronize changes from other tabs, but for now, we'll keep it simple.
+    // A more complex implementation might listen to the `storage` event.
+    // For this app's purpose, the initial read in useState is sufficient.
+  }, [key]);
 
   return [storedValue, setValue];
 }

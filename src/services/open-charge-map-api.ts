@@ -25,7 +25,7 @@ interface OcmStation {
     ConnectionType?: { Title: string };
     PowerKW?: number;
     Quantity?: number;
-    StatusType?: { Title: string };
+    StatusType?: { ID: number, Title: string };
   }[];
   OperatorInfo?: {
     Title: string;
@@ -49,22 +49,20 @@ function mapOcmStationToChargingStation(station: OcmStation): ChargingStation {
   const connectors: Connector[] = [];
 
   station.Connections.forEach(conn => {
-    // Check if a similar connector type already exists
-    const existingConnector = connectors.find(c => c.type === (conn.ConnectionType?.Title || 'Unknown') && c.powerKw === (conn.PowerKW || 0));
-
-    if (existingConnector) {
-      existingConnector.quantity += conn.Quantity || 1;
-    } else if (conn.ConnectionType) {
-      connectors.push({
-        type: conn.ConnectionType.Title,
-        powerKw: conn.PowerKW || 0,
-        quantity: conn.Quantity || 1,
-      });
+    if (conn.ConnectionType) {
+        connectors.push({
+            type: conn.ConnectionType.Title,
+            powerKw: conn.PowerKW || 0,
+            quantity: conn.Quantity || 1,
+        });
     }
   });
-
+  
   const totalConnectors = station.NumberOfPoints || station.Connections.reduce((sum, conn) => sum + (conn.Quantity || 1), 0);
-  const availableConnectors = station.Connections.filter(c => c.StatusType?.Title.toLowerCase() === 'operational').length;
+  
+  // StatusType ID 50 is 'Operational'
+  const availableConnectors = station.Connections.filter(c => c.StatusType?.ID === 50).reduce((sum, conn) => sum + (conn.Quantity || 1), 0);
+
 
   return {
     id: station.ID.toString(),
@@ -77,7 +75,7 @@ function mapOcmStationToChargingStation(station: OcmStation): ChargingStation {
     pricing: station.UsageType?.Title || null,
     availability: {
       total: totalConnectors,
-      available: station.StatusType?.IsOperational ? availableConnectors : 0,
+      available: availableConnectors,
     },
     sourceUrl: station.DataProvider?.WebsiteURL || station.OperatorInfo?.WebsiteURL || station.AddressInfo.RelatedURL || undefined,
     accessType: station.UsageType?.Title.toLowerCase().includes('public') ? 'public' : 'private',
@@ -96,7 +94,7 @@ export async function getChargingStations(params: { lat: number; lon: number; ra
 
   // OCM uses distance in miles for radius
   const distance = radius;
-  const url = `${API_BASE_URL}?key=${API_KEY}&latitude=${lat}&longitude=${lon}&distance=${distance}&distanceunit=Miles&maxresults=100&output=json`;
+  const url = `${API_BASE_URL}?key=${API_KEY}&latitude=${lat}&longitude=${lon}&distance=${distance}&distanceunit=Miles&maxresults=100&output=json&verbose=false`;
   
   const cacheKey = url;
   if (cache.has(cacheKey)) {
@@ -114,8 +112,21 @@ export async function getChargingStations(params: { lat: number; lon: number; ra
     const data: OcmStation[] = await response.json();
     const mappedStations = data.map(mapOcmStationToChargingStation);
     
-    cache.set(cacheKey, mappedStations);
-    return mappedStations;
+    // De-duplicate stations by ID, merging connector info
+    const stationMap = new Map<string, ChargingStation>();
+    mappedStations.forEach(station => {
+      if (stationMap.has(station.id)) {
+        const existing = stationMap.get(station.id)!;
+        existing.connectors.push(...station.connectors);
+      } else {
+        stationMap.set(station.id, station);
+      }
+    });
+
+    const uniqueStations = Array.from(stationMap.values());
+    
+    cache.set(cacheKey, uniqueStations);
+    return uniqueStations;
 
   } catch (error) {
     console.error("Error in getChargingStations:", error);
