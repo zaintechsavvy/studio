@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
@@ -8,9 +9,12 @@ import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useRatings } from '@/hooks/use-ratings';
 import { Skeleton } from '@/components/ui/skeleton';
-import Header from '@/components/voltsage/Header';
 
-const Map = lazy(() => import('@/components/voltsage/Map'));
+const Map = dynamic(() => import('@/components/voltsage/Map'), { 
+  ssr: false,
+  loading: () => <Skeleton className="w-full h-full" />,
+});
+
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -182,14 +186,12 @@ export default function VoltsageApp() {
             </div>
             
             <div className="flex-1 h-full hidden md:flex flex-col">
-              <Suspense fallback={<Skeleton className="w-full h-full" />}>
-                <Map
-                  center={mapCenter}
-                  stations={displayedStations}
-                  selectedStationId={selectedStationId}
-                  onSelectStation={handleSelectStation}
-                />
-              </Suspense>
+              <Map
+                center={mapCenter}
+                stations={displayedStations}
+                selectedStationId={selectedStationId}
+                onSelectStation={handleSelectStation}
+              />
             </div>
           </div>
         </div>
