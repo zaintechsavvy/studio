@@ -1,21 +1,13 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
-import StationMap from '@/components/voltsage/StationMap';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
-import dynamic from 'next/dynamic';
-
-const DynamicStationMap = dynamic(() => import('@/components/voltsage/StationMap'), {
-  ssr: false,
-  loading: () => <div className="flex h-full w-full items-center justify-center bg-muted"><p>Loading Map...</p></div>
-});
-
 
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
@@ -31,6 +23,7 @@ export default function VoltsageApp() {
     
     setIsLoading(true);
     setSelectedStationId(null);
+    setStations(null);
     setIsListVisible(true);
     
     const { chargingStations, error } = await handleSearch({ destination });
@@ -60,9 +53,7 @@ export default function VoltsageApp() {
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-    if (stationId) {
-      setIsListVisible(false);
-    }
+    setIsListVisible(false);
   }, []);
 
   const handleBackToList = useCallback(() => {
@@ -88,8 +79,8 @@ export default function VoltsageApp() {
       <div className="relative flex h-dvh w-full flex-col bg-background">
         <Header />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar>
-            <SidebarContent
+          <div className="mx-auto w-full max-w-md border-x">
+             <SidebarContent
               stations={filteredStations}
               selectedStation={selectedStation}
               isLoading={isLoading}
@@ -102,14 +93,7 @@ export default function VoltsageApp() {
               showFavorites={showFavorites}
               onToggleShowFavorites={() => setShowFavorites(prev => !prev)}
             />
-          </Sidebar>
-          <SidebarInset>
-            <DynamicStationMap
-              stations={filteredStations}
-              selectedStation={selectedStation}
-              onSelectStation={handleSelectStation}
-            />
-          </SidebarInset>
+          </div>
         </div>
       </div>
     </SidebarProvider>

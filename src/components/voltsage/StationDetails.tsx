@@ -2,9 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import type { ChargingStation } from '@/lib/types';
-import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign } from 'lucide-react';
+import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -30,6 +29,12 @@ const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; l
 );
 
 export default function StationDetails({ station, onBack, isFavorite, onToggleFavorite, rating, onRate }: StationDetailsProps) {
+  
+  const handleNavigate = () => {
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
+    window.open(googleMapsUrl, '_blank');
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b p-4">
@@ -45,6 +50,10 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
       </div>
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
+          <Button onClick={handleNavigate} className="w-full">
+            <Navigation className="mr-2 h-4 w-4" />
+            Navigate
+          </Button>
           <Card>
             <CardContent className="p-0">
               <div className="divide-y">
