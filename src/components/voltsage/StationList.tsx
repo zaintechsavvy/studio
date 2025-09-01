@@ -33,7 +33,7 @@ interface StationListProps {
 const ListSkeleton = () => (
   <div className="space-y-3 p-4">
     {Array.from({ length: 7 }).map((_, i) => (
-      <Skeleton key={i} className="h-28 w-full rounded-xl bg-gray-200" />
+      <Skeleton key={i} className="h-28 w-full rounded-xl bg-gray-200/50" />
     ))}
   </div>
 );
@@ -86,7 +86,7 @@ export default function StationList({
 
       return (
         <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-          <div className="p-8">
+          <div className="p-8 glass-card">
             <h3 className="text-lg font-semibold">{emptyTitle}</h3>
             <p className="text-sm text-muted-foreground">{emptyDescription}</p>
           </div>
@@ -109,16 +109,16 @@ export default function StationList({
 
   return (
     <div className="flex h-full flex-col">
-       <div className="p-4 border-b border-border">
+       <div className="p-4 border-b border-white/20">
          <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'nearby' | 'favorites')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-100 h-11 rounded-lg">
-              <TabsTrigger value="nearby" className="h-full rounded-md text-base data-[state=active]:bg-white data-[state=active]:shadow-sm">Nearby</TabsTrigger>
-              <TabsTrigger value="favorites" className="h-full rounded-md text-base data-[state=active]:bg-white data-[state=active]:shadow-sm">Favorites</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-black/5 h-11 rounded-lg">
+              <TabsTrigger value="nearby" className="h-full rounded-md text-base data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Nearby</TabsTrigger>
+              <TabsTrigger value="favorites" className="h-full rounded-md text-base data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Favorites</TabsTrigger>
             </TabsList>
          </Tabs>
        </div>
 
-       <Collapsible className="border-b border-border">
+       <Collapsible className="border-b border-white/20">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-between h-14 text-base px-4">
               <span className="flex items-center gap-2 font-semibold">

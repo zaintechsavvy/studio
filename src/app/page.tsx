@@ -19,7 +19,6 @@ export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { ratings, setRating } = useRatings();
@@ -38,7 +37,6 @@ export default function VoltsageApp() {
     setIsLoading(true);
     setSelectedStationId(null);
     setStations(null);
-    setIsListVisible(true);
     
     const { chargingStations, error } = await handleSearch({ destination });
 
@@ -91,11 +89,6 @@ export default function VoltsageApp() {
     setSelectedStationId(stationId);
   }, []);
 
-  const handleBackToList = useCallback(() => {
-    setSelectedStationId(null);
-    setIsListVisible(true);
-  }, []);
-
   const selectedStation = useMemo(
     () => stations?.find(s => s.id === selectedStationId) ?? null,
     [stations, selectedStationId]
@@ -142,11 +135,11 @@ export default function VoltsageApp() {
   }, [stations, activeTab, isFavorite, filters]);
 
   return (
-    <div className="flex h-dvh w-full justify-center items-center bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-md h-full max-h-dvh bg-background shadow-2xl rounded-2xl overflow-hidden">
+    <div className="flex h-dvh w-full justify-center items-center bg-gray-100 dark:bg-gray-900 bg-gradient-to-br from-primary/20 via-background to-background">
+      <div className="w-full max-w-md h-full max-h-dvh bg-white/50 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden border border-white/30">
           <SidebarContent
             stations={displayedStations}
-            selectedStationId={selectedStationId}
+            selectedStation={selectedStation}
             onSelectStation={handleSelectStation}
             isLoading={isLoading}
             onSearch={handleSearchSubmit}

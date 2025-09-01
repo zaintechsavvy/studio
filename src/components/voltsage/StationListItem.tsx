@@ -22,7 +22,7 @@ export default function StationListItem({ station, onSelectStation, isFavorite }
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.2 }}
-      className="border rounded-lg cursor-pointer overflow-hidden hover:bg-gray-50 active:bg-gray-100"
+      className="border rounded-lg cursor-pointer overflow-hidden bg-white/60 hover:bg-white/90 active:bg-white border-white/20 shadow"
       onClick={() => onSelectStation(station.id)}
     >
       <div className="p-3">

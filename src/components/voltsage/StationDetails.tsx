@@ -51,8 +51,8 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
   const totalConnectors = station.connectors.reduce((sum, conn) => sum + conn.quantity, 0);
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex items-center gap-2 border-b border-border p-3">
+    <div className="flex h-full flex-col bg-transparent">
+      <div className="flex items-center gap-2 border-b border-white/20 p-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9 rounded-full">
           <ArrowLeft className="h-5 w-5" />
           <span className="sr-only">Back</span>
@@ -70,35 +70,36 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
               <Navigation className="mr-2 h-5 w-5" />
               Navigate
             </Button>
-            <Button variant="outline" className="w-full h-11 text-base font-semibold" onClick={handleViewSource} disabled={!station.sourceUrl}>
+            <Button variant="outline" className="w-full h-11 text-base font-semibold bg-white/60 border-2 border-transparent hover:border-primary hover:bg-white" onClick={handleViewSource} disabled={!station.sourceUrl}>
               <ExternalLink className="mr-2 h-5 w-5" />
               View Source
             </Button>
           </div>
           
-          <Separator />
-          <DetailRow icon={MapPin} label="Address">{station.address}</DetailRow>
-          <Separator />
-          <DetailRow icon={Network} label="Network">{station.network}</DetailRow>
-          <Separator />
-          <DetailRow icon={DollarSign} label="Pricing">{station.pricing || 'Information not available'}</DetailRow>
-          <Separator />
-          <DetailRow icon={Clock} label="Hours">{station.operatingHours || 'Information not available'}</DetailRow>
-          <Separator />
-           <DetailRow icon={Plug} label="Connectors">
-             <div className="flex flex-col gap-2">
-                <span className="text-sm text-muted-foreground -mt-2">Total of {totalConnectors} connectors at this location.</span>
-                {station.connectors.map((c, i) => (
-                    <Badge key={i} variant="secondary" className="text-base py-1 px-3 w-fit">{c.quantity}x {c.type} ({c.powerKw}kW)</Badge>
-                ))}
-             </div>
-          </DetailRow>
-          <Separator />
-           <DetailRow icon={Building} label="Facility Type">{station.facilityType || "N/A"}</DetailRow>
-           <Separator />
-           <DetailRow icon={Info} label="Access">{station.accessType}</DetailRow>
+          <div className="glass-card p-4">
+            <DetailRow icon={MapPin} label="Address">{station.address}</DetailRow>
+            <Separator />
+            <DetailRow icon={Network} label="Network">{station.network}</DetailRow>
+            <Separator />
+            <DetailRow icon={DollarSign} label="Pricing">{station.pricing || 'Information not available'}</DetailRow>
+            <Separator />
+            <DetailRow icon={Clock} label="Hours">{station.operatingHours || 'Information not available'}</DetailRow>
+            <Separator />
+             <DetailRow icon={Plug} label="Connectors">
+               <div className="flex flex-col gap-2">
+                  <span className="text-sm text-muted-foreground -mt-2">Total of {totalConnectors} connectors at this location.</span>
+                  {station.connectors.map((c, i) => (
+                      <Badge key={i} variant="secondary" className="text-base py-1 px-3 w-fit">{c.quantity}x {c.type} ({c.powerKw}kW)</Badge>
+                  ))}
+               </div>
+            </DetailRow>
+            <Separator />
+             <DetailRow icon={Building} label="Facility Type">{station.facilityType || "N/A"}</DetailRow>
+             <Separator />
+             <DetailRow icon={Info} label="Access">{station.accessType}</DetailRow>
+          </div>
 
-          <Card className="bg-background border shadow-none my-4">
+          <Card className="bg-white/50 backdrop-blur-lg border border-white/20 shadow-lg my-4">
             <CardHeader>
               <CardTitle>Rate this Station</CardTitle>
               <CardDescription>Help others by sharing your experience.</CardDescription>
