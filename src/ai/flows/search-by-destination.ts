@@ -73,32 +73,37 @@ const getChargingStationsTool = ai.defineTool(
       
       const data = await response.json();
 
-      // Transform the API response to match our ChargingStationSchema
       const chargingStations = data.map((station: any) => {
         
-        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types.filter(Boolean))] : ['Unknown'];
+        let connectorTypes: string[] = [];
+        if (station.connections && station.connections.length > 0) {
+          connectorTypes = [...new Set(station.connections.map((c: any) => c.type_name).filter(Boolean))];
+        }
         if (connectorTypes.length === 0) {
           connectorTypes.push('Unknown');
         }
 
         let speed = "N/A";
-        if (station.ev_dc_fast_num > 0) {
-            speed = "DC Fast Charging";
-        } else if (station.ev_level2_evse_num > 0) {
-            speed = "Level 2";
-        } else if (station.ev_level1_evse_num > 0) {
-            speed = "Level 1";
+        if (station.connections && station.connections.length > 0) {
+            const levels = station.connections.map((c:any) => c.level);
+            if (levels.includes(3)) {
+                speed = "DC Fast Charging";
+            } else if (levels.includes(2)) {
+                speed = "Level 2";
+            } else if (levels.includes(1)) {
+                speed = "Level 1";
+            }
         }
-
+        
         return {
-          name: station.station_name || 'Unknown Station',
-          address: `${station.street_address}, ${station.city}, ${station.state} ${station.zip}`,
+          name: station.station_name || station.name || 'Unknown Station',
+          address: `${station.address || station.street_address}, ${station.city}, ${station.region || station.state} ${station.zip || ''}`.replace(/, ,/g, ','),
           latitude: station.latitude,
           longitude: station.longitude,
           network: station.ev_network || 'Unknown',
           speed: speed,
           connectorTypes: connectorTypes,
-          availability: station.access_days_time || 'Unknown',
+          availability: station.is_active ? '24/7' : 'Varies',
           pricing: station.ev_pricing || 'Varies',
         };
       });
@@ -107,23 +112,11 @@ const getChargingStationsTool = ai.defineTool(
 
     } catch (error) {
       console.error("Failed to fetch charging stations:", error);
-      // Return an empty list in case of an error to avoid crashing the app
       return { chargingStations: [] };
     }
   }
 );
 
-
-const prompt = ai.definePrompt({
-  name: 'searchByDestinationPrompt',
-  input: {schema: SearchByDestinationInputSchema},
-  output: {schema: SearchByDestinationOutputSchema},
-  tools: [getChargingStationsTool],
-  prompt: `You are an expert EV charging station finder. The user will provide a destination, and you must use the getChargingStationsTool to find real-world charging stations near that destination.
-
-  Destination: {{{destination}}}
-`,
-});
 
 const searchByDestinationFlow = ai.defineFlow(
   {
@@ -132,27 +125,7 @@ const searchByDestinationFlow = ai.defineFlow(
     outputSchema: SearchByDestinationOutputSchema,
   },
   async input => {
-    const llmResponse = await prompt(input);
-    const toolCalls = llmResponse.toolCalls();
-
-    if (toolCalls.length === 0) {
-      // This case should be handled based on what is expected.
-      // Maybe the model decided no tool call was necessary.
-      // For this app, we'll assume a tool call is always needed.
-      // And if not, we return empty.
-      return { chargingStations: [] };
-    }
-    
-    // In this specific flow, we expect one tool call to getChargingStationsTool
-    const toolCall = toolCalls[0];
-    if (toolCall.tool !== 'getChargingStationsTool') {
-       return { chargingStations: [] };
-    }
-    
-    // We can now execute the tool call.
-    const toolResult = await toolCall.execute();
-
-    // In this case, the tool's output schema matches our flow's output schema, so we can return it directly.
-    return toolResult as SearchByDestinationOutput;
+    // Directly call the tool since the logic is straightforward now.
+    return getChargingStationsTool({ query: input.destination });
   }
 );
