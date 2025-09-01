@@ -10,3 +10,9 @@ export type ChargingStation = {
   availability: string;
   pricing: string;
 };
+
+export type EnrichedStationDetails = {
+  network: string;
+  pricing: string;
+  availability: string;
+};
