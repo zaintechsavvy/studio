@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SearchByDestinationInputSchema = z.object({
-  destination: z.string().describe('The destination address to search for charging stations near. Must be "latitude,longitude".'),
+  destination: z.string().describe('The destination address to search for charging stations near. Can be an address, or "latitude,longitude".'),
 });
 export type SearchByDestinationInput = z.infer<typeof SearchByDestinationInputSchema>;
 
@@ -43,7 +43,7 @@ const getChargingStationsTool = ai.defineTool(
     name: 'getChargingStationsTool',
     description: 'Get a list of EV charging stations near a given location based on real-world data.',
     inputSchema: z.object({
-      query: z.string().describe("The user's search query. Must be comma-separated latitude and longitude."),
+      query: z.string().describe("The user's search query. Can be an address, or comma-separated latitude and longitude."),
     }),
     outputSchema: SearchByDestinationOutputSchema,
   },
@@ -56,9 +56,7 @@ const getChargingStationsTool = ai.defineTool(
     if (latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]))) {
         url += `latitude=${parseFloat(latLngParts[0])}&longitude=${parseFloat(latLngParts[1])}&radius=50`;
     } else {
-        // If not lat/lng, we can't proceed with this version of the tool.
-        console.error("Invalid query format. Expected latitude,longitude.");
-        return { chargingStations: [] };
+        url += `address=${encodeURIComponent(input.query)}&radius=50`;
     }
     
     try {
@@ -100,7 +98,7 @@ const getChargingStationsTool = ai.defineTool(
         
         return {
           name: station.station_name || station.name || 'Unknown Station',
-          address: `${station.street_address || ''}, ${station.city || ''}, ${station.state || ''} ${station.zip || ''}`.replace(/(^, | ,$|, ,)/g, '').trim(),
+          address: `${station.street_address || ''}, ${station.city || ''}, ${station.state || ''} ${station.zip || ''}`.replace(/(^, | ,$|, ,)/g, '').trim() || 'Address not available',
           latitude: station.latitude,
           longitude: station.longitude,
           network: station.ev_network || 'Unknown',
@@ -109,7 +107,7 @@ const getChargingStationsTool = ai.defineTool(
           availability: station.is_active ? '24/7' : 'Varies',
           pricing: station.ev_pricing || 'Varies',
         };
-      }).filter((station: any) => station.address);
+      }).filter((station: any) => station.address && station.latitude && station.longitude);
 
       return { chargingStations };
 
