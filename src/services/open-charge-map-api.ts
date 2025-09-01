@@ -1,6 +1,7 @@
 import type { ChargingStation, Connector } from '@/lib/types';
 
-const API_KEY = process.env.OCM_API_KEY || 'DEMO_KEY';
+// It's recommended to get a free key from https://openchargemap.org/site/develop/api
+const API_KEY = process.env.OCM_API_KEY;
 const API_BASE_URL = 'https://api.openchargemap.io/v3/poi/';
 
 const cache = new Map<string, any>();
@@ -62,7 +63,7 @@ function mapOcmStationToChargingStation(station: OcmStation): ChargingStation {
     }
   });
 
-  const totalConnectors = station.NumberOfPoints || station.Connections.length;
+  const totalConnectors = station.NumberOfPoints || station.Connections.reduce((sum, conn) => sum + (conn.Quantity || 1), 0);
   const availableConnectors = station.Connections.filter(c => c.StatusType?.Title.toLowerCase() === 'operational').length;
 
   return {
@@ -89,6 +90,10 @@ function mapOcmStationToChargingStation(station: OcmStation): ChargingStation {
 export async function getChargingStations(params: { lat: number; lon: number; radius?: number }): Promise<ChargingStation[]> {
   const { lat, lon, radius = 5 } = params;
   
+  if (!API_KEY) {
+    throw new Error('Open Charge Map API key is missing. Please add OCM_API_KEY to your .env file.');
+  }
+
   // OCM uses distance in miles for radius
   const distance = radius;
   const url = `${API_BASE_URL}?key=${API_KEY}&latitude=${lat}&longitude=${lon}&distance=${distance}&distanceunit=Miles&maxresults=100&output=json`;
