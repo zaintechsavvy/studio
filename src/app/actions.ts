@@ -1,6 +1,7 @@
 'use server';
 
-import { findNearbyChargers, type ChargingStation } from '@/ai/flows/find-chargers-flow';
+import { getChargingStations } from '@/services/nrel-api';
+import type { ChargingStation } from '@/lib/types';
 import { z } from 'zod';
 
 const searchSchema = z.object({
@@ -34,7 +35,7 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
   }
 
   try {
-    const result = await findNearbyChargers({ lat, lon });
+    const result = await getChargingStations({ lat, lon });
     return { chargingStations: result };
   } catch (error) {
     console.error("Error searching for destination:", error);

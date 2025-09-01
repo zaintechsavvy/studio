@@ -5,77 +5,77 @@ import type { ChargingStation } from '@/lib/types';
 import SearchForm from '@/components/voltsage/SearchForm';
 import StationList from '@/components/voltsage/StationList';
 import StationDetails from '@/components/voltsage/StationDetails';
-import { useRatings } from '@/hooks/use-ratings';
 import type { FilterOptions } from '@/app/page';
 
 interface SidebarContentProps {
   stations: ChargingStation[] | null;
-  selectedStation: ChargingStation | null;
+  selectedStationId: string | null;
+  onSelectStation: (stationId: string | null) => void;
   isLoading: boolean;
-  isListVisible: boolean;
-  activeTab: 'nearby' | 'favorites';
   onSearch: (destination: string) => void;
-  onSelectStation: (stationId: string) => void;
-  onBackToList: () => void;
+  activeTab: 'nearby' | 'favorites';
+  onTabChange: (tab: 'nearby' | 'favorites') => void;
   isFavorite: (stationId: string) => boolean;
   onToggleFavorite: (stationId: string) => void;
-  onTabChange: (tab: 'nearby' | 'favorites') => void;
   filters: FilterOptions;
   onFiltersChange: (filters: FilterOptions) => void;
   allConnectorTypes: string[];
+  allNetworks: string[];
+  ratings: { [key: string]: number };
+  onRate: (stationId: string, rating: number) => void;
 }
 
 export default function SidebarContent({
   stations,
-  selectedStation,
-  isLoading,
-  isListVisible,
-  activeTab,
-  onSearch,
+  selectedStationId,
   onSelectStation,
-  onBackToList,
+  isLoading,
+  onSearch,
+  activeTab,
+  onTabChange,
   isFavorite,
   onToggleFavorite,
-  onTabChange,
   filters,
   onFiltersChange,
   allConnectorTypes,
+  allNetworks,
+  ratings,
+  onRate,
 }: SidebarContentProps) {
-  const { ratings, setRating } = useRatings();
 
   const animationVariants = {
-    initial: { opacity: 0, x: -30 },
+    initial: { opacity: 0, x: -20 },
     animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 30 },
+    exit: { opacity: 0, x: 20 },
   };
   
-  const showDetailsInSidebar = isListVisible === false && !!selectedStation;
+  const selectedStation = stations?.find(s => s.id === selectedStationId) ?? null;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-white/20">
-        <SearchForm onSearch={onSearch} isLoading={isLoading && !stations} />
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-4 border-b border-border">
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Voltsage</h2>
+        <SearchForm onSearch={onSearch} isLoading={isLoading} />
       </div>
       <div className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
-          {showDetailsInSidebar ? (
+          {selectedStation ? (
             <motion.div
               key="details"
               variants={animationVariants}
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="h-full"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="h-full absolute w-full"
             >
               <StationDetails
                 station={selectedStation}
-                onBack={onBackToList}
+                onBack={() => onSelectStation(null)}
                 isFavorite={isFavorite(selectedStation.id)}
                 onToggleFavorite={() => onToggleFavorite(selectedStation.id)}
                 rating={ratings[selectedStation.id] || 0}
-                onRate={(rating) => setRating(selectedStation.id, rating)}
-                isPillVariant={true}
+                onRate={(rating) => onRate(selectedStation.id, rating)}
               />
             </motion.div>
           ) : (
@@ -85,8 +85,8 @@ export default function SidebarContent({
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="h-full"
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="h-full absolute w-full"
             >
               <StationList
                 stations={stations}
@@ -98,13 +98,14 @@ export default function SidebarContent({
                 filters={filters}
                 onFiltersChange={onFiltersChange}
                 allConnectorTypes={allConnectorTypes}
+                allNetworks={allNetworks}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-      <div className="p-2 text-center text-xs text-muted-foreground border-t border-white/20">
-        <p>Powered by Voltsage</p>
+      <div className="p-2 text-center text-xs text-muted-foreground border-t border-border">
+        <p>Data from NREL. Use for informational purposes only.</p>
       </div>
     </div>
   );

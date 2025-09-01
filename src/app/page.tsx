@@ -1,24 +1,28 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
-import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
-import Header from '@/components/voltsage/Header';
+import type { ChargingStation } from '@/lib/types';
 import SidebarContent from '@/components/voltsage/SidebarContent';
-import StationDetails from '@/components/voltsage/StationDetails';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useRatings } from '@/hooks/use-ratings';
-import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
+import Header from '@/components/voltsage/Header';
+
+const Map = lazy(() => import('@/components/voltsage/Map'));
 
 export type FilterOptions = {
   connectorTypes: string[];
-  minSpeed: number;
+  minPower: number;
+  networks: string[];
+  showAvailable: boolean;
 };
 
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([37.7749, -122.4194]);
   const [isLoading, setIsLoading] = useState(true);
   const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
@@ -28,7 +32,9 @@ export default function VoltsageApp() {
   
   const [filters, setFilters] = useState<FilterOptions>({
     connectorTypes: [],
-    minSpeed: 0,
+    minPower: 0,
+    networks: [],
+    showAvailable: false,
   });
 
   const handleSearchSubmit = useCallback(async (destination: string) => {
@@ -39,6 +45,11 @@ export default function VoltsageApp() {
     setStations(null);
     setIsListVisible(true);
     
+    const [latStr, lonStr] = destination.split(',');
+    const lat = parseFloat(latStr);
+    const lon = parseFloat(lonStr);
+    setMapCenter([lat, lon]);
+
     const { chargingStations, error } = await handleSearch({ destination });
 
     if (error) {
@@ -49,15 +60,11 @@ export default function VoltsageApp() {
       });
       setStations([]);
     } else {
-      const stationsWithIds = chargingStations.map((station, index) => ({
-        ...station,
-        id: `${station.latitude}-${station.longitude}-${index}`,
-      }));
-      setStations(stationsWithIds);
-      if (stationsWithIds.length === 0) {
+      setStations(chargingStations);
+      if (chargingStations.length === 0) {
         toast({
           title: 'No stations found',
-          description: 'The AI could not find any stations nearby. Try different coordinates.',
+          description: 'No stations found near that location. Try a different area.',
         });
       }
     }
@@ -76,31 +83,27 @@ export default function VoltsageApp() {
           toast({
             variant: "destructive",
             title: "Geolocation failed",
-            description: "Could not get your location. Please enter a location manually.",
+            description: "Could not get your location. Searching default location.",
           });
-          setIsLoading(false);
-          setStations([]);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+          handleSearchSubmit('37.7749,-122.4194');
         }
       );
     } else {
       toast({
         title: "Geolocation not supported",
-        description: "Your browser does not support geolocation. Please enter a location manually.",
+        description: "Your browser does not support geolocation. Searching default location.",
       });
-      setIsLoading(false);
-      setStations([]);
+      handleSearchSubmit('37.7749,-122.4194');
     }
   }, [handleSearchSubmit, toast]);
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-    setIsListVisible(false);
-  }, []);
+    const station = stations?.find(s => s.id === stationId);
+    if (station) {
+      setMapCenter([station.latitude, station.longitude]);
+    }
+  }, [stations]);
 
   const handleBackToList = useCallback(() => {
     setSelectedStationId(null);
@@ -112,6 +115,24 @@ export default function VoltsageApp() {
     [stations, selectedStationId]
   );
   
+  const allConnectorTypes = useMemo(() => {
+    if (!stations) return [];
+    const allTypes = new Set<string>();
+    stations.forEach(s => s.connectors.forEach(c => allTypes.add(c.type)));
+    return Array.from(allTypes);
+  }, [stations]);
+
+  const allNetworks = useMemo(() => {
+    if (!stations) return [];
+    const networks = new Set<string>();
+    stations.forEach(s => {
+      if(s.network && s.network !== 'Unknown') {
+        networks.add(s.network)
+      }
+    });
+    return Array.from(networks);
+  }, [stations]);
+
   const displayedStations = useMemo(() => {
     if (!stations) return null;
     let currentStations = activeTab === 'favorites'
@@ -122,73 +143,53 @@ export default function VoltsageApp() {
       const connectorMatch = filters.connectorTypes.length === 0 || 
         filters.connectorTypes.some(ct => station.connectors.some(c => c.type === ct));
       
-      const stationMaxPower = Math.max(...station.connectors.map(c => c.powerKw));
-      const speedMatch = stationMaxPower >= filters.minSpeed;
+      const stationMaxPower = Math.max(0, ...station.connectors.map(c => c.powerKw));
+      const powerMatch = stationMaxPower >= filters.minPower;
+
+      const networkMatch = filters.networks.length === 0 || filters.networks.includes(station.network);
+
+      const availabilityMatch = !filters.showAvailable || station.availability.available > 0;
       
-      return connectorMatch && speedMatch;
+      return connectorMatch && powerMatch && networkMatch && availabilityMatch;
     });
 
   }, [stations, activeTab, isFavorite, filters]);
 
-  const allConnectorTypes = useMemo(() => {
-    if (!stations) return [];
-    const allTypes = new Set<string>();
-    stations.forEach(s => s.connectors.forEach(c => allTypes.add(c.type)));
-    return Array.from(allTypes);
-  }, [stations]);
-
   return (
       <div className="relative flex h-dvh w-full flex-col bg-background font-sans">
-        <Image
-          src="https://picsum.photos/1920/1080"
-          alt="Abstract background"
-          fill
-          quality={80}
-          className="object-cover z-0"
-          data-ai-hint="abstract background"
-        />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-0" />
-
-        <div className="relative z-10 flex flex-1 overflow-hidden p-4">
+        <div className="relative z-10 flex flex-1 overflow-hidden">
           <div className="flex w-full h-full max-h-full">
-            
-            <div className="w-full max-w-sm shrink-0 h-full">
-              <div className="glass-card flex flex-col h-full">
+            <div className="w-full max-w-md shrink-0 h-full border-r border-border bg-background z-20">
+              <div className="flex flex-col h-full shadow-lg">
                 <SidebarContent
                   stations={displayedStations}
-                  selectedStation={selectedStation}
-                  isLoading={isLoading}
-                  isListVisible={isListVisible}
-                  onSearch={handleSearchSubmit}
+                  selectedStationId={selectedStationId}
                   onSelectStation={handleSelectStation}
-                  onBackToList={handleBackToList}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={toggleFavorite}
+                  isLoading={isLoading}
+                  onSearch={handleSearchSubmit}
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
                   filters={filters}
                   onFiltersChange={setFilters}
                   allConnectorTypes={allConnectorTypes}
+                  allNetworks={allNetworks}
+                  ratings={ratings}
+                  onRate={setRating}
                 />
               </div>
             </div>
             
-            <div className="flex-1 ml-4 h-full hidden md:flex">
-              <div className="glass-card w-full h-full flex items-center justify-center overflow-hidden">
-                {selectedStation ? (
-                   <StationDetails
-                      station={selectedStation}
-                      onBack={handleBackToList}
-                      isFavorite={isFavorite(selectedStation.id)}
-                      onToggleFavorite={() => toggleFavorite(selectedStation.id)}
-                      rating={ratings[selectedStation.id] || 0}
-                      onRate={(rating) => setRating(selectedStation.id, rating)}
-                      isPillVariant={false}
-                    />
-                ) : (
-                  <Header />
-                )}
-              </div>
+            <div className="flex-1 h-full hidden md:flex flex-col">
+              <Suspense fallback={<Skeleton className="w-full h-full" />}>
+                <Map
+                  center={mapCenter}
+                  stations={displayedStations}
+                  selectedStationId={selectedStationId}
+                  onSelectStation={handleSelectStation}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
