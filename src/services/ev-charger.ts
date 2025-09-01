@@ -52,29 +52,47 @@ export async function getChargingStations({
     const chargingStations: ChargingStationData[] = data
       .map((station: any) => {
         let connectorTypes: string[] = [];
+        let maxPower = 0;
+
         if (station.connections && Array.isArray(station.connections)) {
-          const types = station.connections
-            .map(
-              (c: any) =>
-                c.connection_type || c.type_name || c.connector_type || null
-            )
-            .filter(Boolean);
-          connectorTypes = [...new Set(types)] as string[];
+          const types = new Set<string>();
+          station.connections.forEach((c: any) => {
+              const type = c.connection_type || c.type_name || c.connector_type;
+              if (type) {
+                  types.add(type);
+              }
+              const power = parseFloat(c.power_kw);
+              if (!isNaN(power) && power > maxPower) {
+                  maxPower = power;
+              }
+          });
+          connectorTypes = Array.from(types);
         }
+
         if (connectorTypes.length === 0) {
           connectorTypes.push("Unknown");
         }
 
         let speed = "N/A";
-        if (station.connections && station.connections.length > 0) {
-          const levels: (string | number)[] = station.connections.map((c: any) => c.level).filter(Boolean);
-          if (levels.includes("DC Fast") || levels.some(l => typeof l === 'string' && l.toLowerCase().includes('dc'))) {
-            speed = "DC Fast Charging";
-          } else if (levels.includes(2) || levels.includes("2") || levels.includes("Level 2")) {
-            speed = "Level 2";
-          } else if (levels.includes(1) || levels.includes("1") || levels.includes("Level 1")) {
-            speed = "Level 1";
-          }
+        if (maxPower > 0) {
+            if (maxPower >= 50) {
+                speed = `DC Fast (${maxPower.toFixed(0)} kW)`;
+            } else if (maxPower >= 7) {
+                speed = `Level 2 (${maxPower.toFixed(1)} kW)`;
+            } else {
+                speed = `Level 1 (${maxPower.toFixed(1)} kW)`;
+            }
+        } else {
+            if (station.connections && station.connections.length > 0) {
+                const levels: (string | number)[] = station.connections.map((c: any) => c.level).filter(Boolean);
+                if (levels.includes("DC Fast") || levels.some(l => typeof l === 'string' && l.toLowerCase().includes('dc'))) {
+                    speed = "DC Fast Charging";
+                } else if (levels.includes(2) || levels.includes("2") || levels.includes("Level 2")) {
+                    speed = "Level 2";
+                } else if (levels.includes(1) || levels.includes("1") || levels.includes("Level 1")) {
+                    speed = "Level 1";
+                }
+            }
         }
         
         const fullAddress = `${station.street_address || ""}, ${station.city || ""}, ${
