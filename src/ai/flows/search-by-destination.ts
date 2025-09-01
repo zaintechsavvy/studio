@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SearchByDestinationInputSchema = z.object({
-  destination: z.string().describe('The destination address to search for charging stations near. Can be an address or "latitude,longitude".'),
+  destination: z.string().describe('The destination address to search for charging stations near. Must be "latitude,longitude".'),
 });
 export type SearchByDestinationInput = z.infer<typeof SearchByDestinationInputSchema>;
 
@@ -43,7 +43,7 @@ const getChargingStationsTool = ai.defineTool(
     name: 'getChargingStationsTool',
     description: 'Get a list of EV charging stations near a given location based on real-world data.',
     inputSchema: z.object({
-      query: z.string().describe("The user's search query, which can be a location, address, or point of interest. Can be an address or comma-separated latitude and longitude."),
+      query: z.string().describe("The user's search query. Must be comma-separated latitude and longitude."),
     }),
     outputSchema: SearchByDestinationOutputSchema,
   },
@@ -53,12 +53,12 @@ const getChargingStationsTool = ai.defineTool(
     let url = 'https://api.api-ninjas.com/v1/evchargers?';
     
     const latLngParts = input.query.split(',');
-    const isLatLng = latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]));
-
-    if (isLatLng) {
+    if (latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]))) {
         url += `latitude=${parseFloat(latLngParts[0])}&longitude=${parseFloat(latLngParts[1])}&radius=50`;
     } else {
-        url += `address=${encodeURIComponent(input.query)}`;
+        // If not lat/lng, we can't proceed with this version of the tool.
+        console.error("Invalid query format. Expected latitude,longitude.");
+        return { chargingStations: [] };
     }
     
     try {
@@ -78,8 +78,9 @@ const getChargingStationsTool = ai.defineTool(
       const chargingStations = data.map((station: any) => {
         
         let connectorTypes: string[] = [];
-        if (station.connections && station.connections.length > 0) {
-          connectorTypes = [...new Set(station.connections.map((c: any) => c.type_name).filter(Boolean) as string[])];
+        if (station.connections && Array.isArray(station.connections)) {
+          const types = station.connections.map((c: any) => c.type_name).filter(Boolean);
+          connectorTypes = [...new Set(types as string[])];
         }
         if (connectorTypes.length === 0) {
           connectorTypes.push('Unknown');
