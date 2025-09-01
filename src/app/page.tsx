@@ -54,7 +54,7 @@ export default function VoltsageApp() {
       if (stationsWithIds.length === 0) {
         toast({
           title: 'No stations found',
-          description: 'Try a different destination or broaden your search.',
+          description: 'Try different coordinates or broaden your search.',
         });
       }
     }
@@ -73,10 +73,11 @@ export default function VoltsageApp() {
           toast({
             variant: "destructive",
             title: "Geolocation failed",
-            description: "Could not get your location. Please enter a destination manually.",
+            description: "Could not get your location. Please enter coordinates manually.",
           });
-          // Fallback to a default search 
-          handleSearchSubmit("New York, NY");
+          // Fallback search fails if no default is provided. Let user search manually.
+          setIsLoading(false);
+          setStations([]);
         },
         {
           enableHighAccuracy: true,
@@ -87,10 +88,11 @@ export default function VoltsageApp() {
     } else {
       toast({
         title: "Geolocation not supported",
-        description: "Your browser does not support geolocation. Please enter a destination manually.",
+        description: "Your browser does not support geolocation. Please enter coordinates manually.",
       });
-      // Fallback to a default search
-      handleSearchSubmit("New York, NY");
+      // Fallback search fails if no default is provided. Let user search manually.
+      setIsLoading(false);
+      setStations([]);
     }
   }, [handleSearchSubmit, toast]);
 

@@ -4,7 +4,7 @@ import { getChargingStations, type ChargingStationData } from '@/services/ev-cha
 import { z } from 'zod';
 
 const searchSchema = z.object({
-  destination: z.string().min(2, { message: "Destination must be at least 2 characters long." }),
+  destination: z.string().min(3, { message: "Search term must be at least 3 characters long." }),
 });
 
 type SearchResult = {
@@ -23,7 +23,8 @@ async function geocodeAddress(address: string): Promise<string | null> {
     });
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Geocoding API call failed with status ${response.status}: ${errorText}`);
+        console.error(`Geocoding API call failed with status ${response.status}: ${errorText}`);
+        return null;
     }
     const data = await response.json();
     if (data && data.length > 0) {
@@ -58,8 +59,8 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
   let lon: string;
 
   if (isLatLng) {
-    lat = latLngParts[0];
-    lon = latLngParts[1];
+    lat = latLngParts[0].trim();
+    lon = latLngParts[1].trim();
   } else {
     // If it's not lat,lon, geocode it
     const coordinates = await geocodeAddress(searchInput);
@@ -70,7 +71,7 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
     } else {
       return {
         chargingStations: [],
-        error: `Could not find location for "${validation.data.destination}". Please try a different search.`,
+        error: `Could not find location for "${validation.data.destination}". Please try different coordinates.`,
       };
     }
   }
