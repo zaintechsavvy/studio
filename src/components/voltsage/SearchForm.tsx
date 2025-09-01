@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, LoaderCircle, LocateFixed } from 'lucide-react';
@@ -39,14 +39,14 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-2 pt-2">
       <div className="flex w-full items-center gap-2">
         <Input
           type="text"
           placeholder="Latitude"
           value={lat}
           onChange={(e) => setLat(e.target.value)}
-          className="h-12 text-base bg-white/60 focus:bg-white border-2 border-transparent focus:border-primary"
+          className="h-11 text-base bg-sidebar-accent/50 focus:bg-background border-2 border-transparent focus:border-primary"
           disabled={isLoading}
         />
         <Input
@@ -54,10 +54,10 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           placeholder="Longitude"
           value={lon}
           onChange={(e) => setLon(e.target.value)}
-          className="h-12 text-base bg-white/60 focus:bg-white border-2 border-transparent focus:border-primary"
+          className="h-11 text-base bg-sidebar-accent/50 focus:bg-background border-2 border-transparent focus:border-primary"
           disabled={isLoading}
         />
-        <Button type="submit" disabled={isLoading || !lat.trim() || !lon.trim()} size="icon" className="shrink-0 h-12 w-12 rounded-full">
+        <Button type="submit" disabled={isLoading || !lat.trim() || !lon.trim()} size="icon" className="shrink-0 h-11 w-11 rounded-lg">
           {isLoading ? (
             <LoaderCircle className="h-5 w-5 animate-spin" />
           ) : (
@@ -66,7 +66,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <span className="sr-only">Search</span>
         </Button>
       </div>
-      <Button type="button" variant="outline" onClick={handleGetCurrentLocation} className="w-full bg-white/60 border-2 border-transparent hover:border-primary hover:bg-white">
+      <Button type="button" variant="ghost" onClick={handleGetCurrentLocation} className="w-full h-11">
         <LocateFixed className="mr-2 h-4 w-4" />
         Use Current Location
       </Button>

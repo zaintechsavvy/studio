@@ -23,17 +23,17 @@ interface StationListProps {
   onSelectStation: (stationId: string) => void;
   activeTab: 'nearby' | 'favorites';
   onTabChange: (tab: 'nearby' | 'favorites') => void;
-  isFavorite: (stationId: string) => boolean;
   filters: FilterOptions;
   onFiltersChange: (filters: FilterOptions) => void;
   allConnectorTypes: string[];
   allNetworks: string[];
+  selectedStationId: string | null;
 }
 
 const ListSkeleton = () => (
   <div className="space-y-3 p-4">
     {Array.from({ length: 7 }).map((_, i) => (
-      <Skeleton key={i} className="h-28 w-full rounded-xl bg-gray-200/50" />
+      <Skeleton key={i} className="h-28 w-full rounded-xl bg-muted" />
     ))}
   </div>
 );
@@ -44,11 +44,11 @@ export default function StationList({
   onSelectStation,
   activeTab,
   onTabChange,
-  isFavorite,
   filters,
   onFiltersChange,
   allConnectorTypes,
-  allNetworks
+  allNetworks,
+  selectedStationId
 }: StationListProps) {
   
   const handleConnectorChange = (connector: string) => {
@@ -85,8 +85,8 @@ export default function StationList({
         : 'Try adjusting filters or searching a new area.';
 
       return (
-        <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-          <div className="p-8 glass-card">
+        <div className="flex h-full flex-col items-center justify-center p-8 text-center text-sidebar-foreground">
+           <div className="p-8 bg-sidebar-accent/50 rounded-2xl">
             <h3 className="text-lg font-semibold">{emptyTitle}</h3>
             <p className="text-sm text-muted-foreground">{emptyDescription}</p>
           </div>
@@ -100,7 +100,7 @@ export default function StationList({
             key={station.id}
             station={station}
             onSelectStation={onSelectStation}
-            isFavorite={isFavorite(station.id)}
+            isSelected={station.id === selectedStationId}
           />
         ))}
       </div>
@@ -109,16 +109,16 @@ export default function StationList({
 
   return (
     <div className="flex h-full flex-col">
-       <div className="p-4 border-b border-white/20">
+       <div className="p-2 border-b border-sidebar-border">
          <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as 'nearby' | 'favorites')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-black/5 h-11 rounded-lg">
-              <TabsTrigger value="nearby" className="h-full rounded-md text-base data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Nearby</TabsTrigger>
-              <TabsTrigger value="favorites" className="h-full rounded-md text-base data-[state=active]:bg-white/80 data-[state=active]:shadow-sm">Favorites</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-11 rounded-lg">
+              <TabsTrigger value="nearby" className="h-full rounded-md text-base data-[state=active]:bg-background data-[state=active]:shadow-sm">Nearby</TabsTrigger>
+              <TabsTrigger value="favorites" className="h-full rounded-md text-base data-[state=active]:bg-background data-[state=active]:shadow-sm">Favorites</TabsTrigger>
             </TabsList>
          </Tabs>
        </div>
 
-       <Collapsible className="border-b border-white/20">
+       <Collapsible className="border-b border-sidebar-border">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-between h-14 text-base px-4">
               <span className="flex items-center gap-2 font-semibold">
@@ -127,7 +127,7 @@ export default function StationList({
               </span>
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="py-4 px-4 space-y-6">
+          <CollapsibleContent className="py-4 px-4 space-y-6 bg-sidebar-accent/20">
             <div className="flex items-center space-x-3">
               <Checkbox 
                 id="show-available" 

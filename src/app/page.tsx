@@ -5,8 +5,16 @@ import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
 import SidebarContent from '@/components/voltsage/SidebarContent';
+import StationDetails from '@/components/voltsage/StationDetails';
+import Welcome from '@/components/voltsage/Welcome';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useRatings } from '@/hooks/use-ratings';
+import {
+  Sidebar,
+  SidebarContent as SidebarMainContent,
+  SidebarProvider,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -135,26 +143,37 @@ export default function VoltsageApp() {
   }, [stations, activeTab, isFavorite, filters]);
 
   return (
-    <div className="flex h-dvh w-full justify-center items-center bg-gray-100 dark:bg-gray-900 bg-gradient-to-br from-primary/20 via-background to-background">
-      <div className="w-full max-w-md h-full max-h-dvh bg-white/50 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden border border-white/30">
-          <SidebarContent
-            stations={displayedStations}
-            selectedStation={selectedStation}
-            onSelectStation={handleSelectStation}
-            isLoading={isLoading}
-            onSearch={handleSearchSubmit}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            filters={filters}
-            onFiltersChange={setFilters}
-            allConnectorTypes={allConnectorTypes}
-            allNetworks={allNetworks}
-            ratings={ratings}
-            onRate={setRating}
-          />
-      </div>
-    </div>
+     <SidebarProvider>
+      <Sidebar>
+        <SidebarContent
+          stations={displayedStations}
+          onSelectStation={handleSelectStation}
+          isLoading={isLoading}
+          onSearch={handleSearchSubmit}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          filters={filters}
+          onFiltersChange={setFilters}
+          allConnectorTypes={allConnectorTypes}
+          allNetworks={allNetworks}
+          selectedStationId={selectedStationId}
+        />
+      </Sidebar>
+      <SidebarInset>
+        <div className="h-dvh flex-1 overflow-y-auto">
+          {selectedStation ? (
+            <StationDetails
+              station={selectedStation}
+              isFavorite={isFavorite(selectedStation.id)}
+              onToggleFavorite={() => toggleFavorite(selectedStation.id)}
+              rating={ratings[selectedStation.id] || 0}
+              onRate={(rating) => onRate(selectedStation.id, rating)}
+            />
+          ) : (
+            <Welcome />
+          )}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
