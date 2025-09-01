@@ -36,8 +36,6 @@ interface MapProps {
 }
 
 export default function Map({ center, stations, selectedStationId, onSelectStation }: MapProps) {
-  if (typeof window === 'undefined') return null;
-
   return (
     <MapContainer center={center} zoom={13} scrollWheelZoom={true} className="h-full w-full z-10">
       <ChangeView center={center} zoom={13} />
