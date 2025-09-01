@@ -1,6 +1,6 @@
 'use client';
 
-import type { ChargingStation } from '@/lib/types';
+import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import StationListItem from './StationListItem';
@@ -11,7 +11,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Button } from '@/components/ui/button';
-import { Filter, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';

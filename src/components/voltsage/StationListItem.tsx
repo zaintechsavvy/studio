@@ -1,5 +1,5 @@
-import type { ChargingStation } from '@/lib/types';
-import { Zap, Plug, MapPin, Heart, ChevronRight } from 'lucide-react';
+import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
+import { Zap, Plug, MapPin, Heart, ChevronRight, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -11,6 +11,9 @@ interface StationListItemProps {
 }
 
 export default function StationListItem({ station, onSelectStation, isFavorite }: StationListItemProps) {
+  const maxPower = Math.max(...station.connectors.map(c => c.powerKw));
+  const isFastCharger = maxPower >= 50;
+
   return (
     <motion.div
       layout
@@ -34,16 +37,20 @@ export default function StationListItem({ station, onSelectStation, isFavorite }
           </div>
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 shrink-0 text-primary" />
-            <span className="font-medium text-foreground">{station.speed}</span>
+            <span className={cn("font-medium text-foreground", isFastCharger && "text-green-600")}>{maxPower} kW</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 shrink-0 text-primary" />
+            <span className="font-medium text-foreground">{station.availability.available} / {station.availability.total} available</span>
           </div>
           <div className="flex items-center gap-2">
             <Plug className="h-4 w-4 shrink-0 text-primary" />
             <div className="flex flex-wrap gap-1.5">
-              {station.connectorTypes.slice(0, 3).map(type => (
-                <Badge key={type} variant="secondary">{type}</Badge>
+              {station.connectors.slice(0, 3).map((c, i) => (
+                <Badge key={i} variant="secondary">{c.type}</Badge>
               ))}
-              {station.connectorTypes.length > 3 && (
-                <Badge variant="outline">+{station.connectorTypes.length - 3}</Badge>
+              {station.connectors.length > 3 && (
+                <Badge variant="outline">+{station.connectors.length - 3}</Badge>
               )}
             </div>
           </div>

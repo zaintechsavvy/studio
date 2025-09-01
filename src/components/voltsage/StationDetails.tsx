@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { ChargingStation, EnrichedStationDetails } from '@/lib/types';
-import { getStationDetails } from '@/ai/flows/get-station-details';
-import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Info } from 'lucide-react';
+import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
+import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Users, Image as ImageIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -17,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
 interface StationDetailsProps {
   station: ChargingStation;
@@ -29,55 +27,18 @@ interface StationDetailsProps {
   isPillVariant?: boolean;
 }
 
-const DetailRow = ({ icon: Icon, label, children, isLoading }: { icon: React.ElementType; label: string; children: React.ReactNode; isLoading?: boolean }) => (
+const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode; }) => (
   <div className="flex items-start gap-4">
     <Icon className="h-5 w-5 mt-1 text-primary shrink-0" />
     <div className="flex-1">
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      {isLoading ? (
-        <Skeleton className="h-6 w-3/4 mt-1" />
-      ) : (
-        <div className="text-base text-foreground font-medium">{children}</div>
-      )}
+      <div className="text-base text-foreground font-medium">{children}</div>
     </div>
   </div>
 );
 
 export default function StationDetails({ station, onBack, isFavorite, onToggleFavorite, rating, onRate, isPillVariant = true }: StationDetailsProps) {
-  const [enrichedDetails, setEnrichedDetails] = useState<EnrichedStationDetails | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-
-  useEffect(() => {
-    async function fetchDetails() {
-      if (!station) return;
-      setIsLoadingDetails(true);
-      try {
-        const details = await getStationDetails({
-          name: station.name,
-          address: station.address,
-        });
-        setEnrichedDetails(details);
-      } catch (error) {
-        console.error("Failed to get enriched station details:", error);
-        // Set to a default error state so we don't keep retrying
-        setEnrichedDetails({
-          network: station.network,
-          pricing: station.pricing,
-          availability: station.availability,
-        });
-      } finally {
-        setIsLoadingDetails(false);
-      }
-    }
-    fetchDetails();
-  }, [station]);
-
-  const displayDetails = {
-    network: isLoadingDetails ? station.network : (enrichedDetails?.network || station.network),
-    pricing: isLoadingDetails ? station.pricing : (enrichedDetails?.pricing || station.pricing),
-    availability: isLoadingDetails ? station.availability : (enrichedDetails?.availability || station.availability),
-  };
-
+  
   const handleNavigateGoogle = () => {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
     window.open(googleMapsUrl, '_blank');
@@ -87,6 +48,9 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
     const appleMapsUrl = `https://maps.apple.com/?daddr=${station.latitude},${station.longitude}`;
     window.open(appleMapsUrl, '_blank');
   };
+
+  const maxPower = Math.max(...station.connectors.map(c => c.powerKw));
+  const isFastCharger = maxPower >= 50;
 
   if (isPillVariant) {
     return (
@@ -104,6 +68,12 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
         </div>
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
+            {station.photoUrl && (
+              <div className="aspect-video w-full relative rounded-lg overflow-hidden border">
+                <Image src={station.photoUrl} alt={`Photo of ${station.name}`} fill className="object-cover" />
+              </div>
+            )}
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full h-12 text-base font-semibold">
@@ -127,33 +97,34 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
                   {station.address}
                 </DetailRow>
                 <Separator />
-                <DetailRow icon={Info} label="Availability" isLoading={isLoadingDetails}>
-                  <Badge 
-                    variant={displayDetails.availability.toLowerCase().includes('24/7') ? 'default' : 'secondary'}
-                    className={cn(displayDetails.availability.toLowerCase().includes('24/7') ? 'bg-green-100 text-green-800 border-green-200' : '')}
-                  >
-                    {displayDetails.availability}
+                 <DetailRow icon={Users} label="Availability">
+                  <Badge variant={station.availability.inUse === 0 ? 'default' : 'secondary'}
+                    className={cn(station.availability.inUse === 0 ? 'bg-green-100 text-green-800 border-green-200' : '')}>
+                    {station.availability.available} / {station.availability.total} Available
                   </Badge>
                 </DetailRow>
                 <Separator />
-                <DetailRow icon={Zap} label="Charging Speed">
-                    {station.speed}
+                <DetailRow icon={Zap} label="Max Speed">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(isFastCharger && "text-green-600 font-bold")}>{maxPower} kW</span>
+                      {isFastCharger && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">DC Fast</Badge>}
+                    </div>
                 </DetailRow>
                 <Separator />
                 <DetailRow icon={Plug} label="Connectors">
                   <div className="flex flex-wrap gap-2">
-                    {station.connectorTypes.map((type) => (
-                      <Badge key={type} variant="secondary" className="text-base py-1 px-3">{type}</Badge>
+                    {station.connectors.map((c, i) => (
+                      <Badge key={i} variant="secondary" className="text-base py-1 px-3">{c.type} ({c.powerKw}kW)</Badge>
                     ))}
                   </div>
                 </DetailRow>
                 <Separator />
-                <DetailRow icon={Network} label="Network" isLoading={isLoadingDetails}>
-                  {displayDetails.network}
+                <DetailRow icon={Network} label="Network">
+                  {station.network}
                 </DetailRow>
                 <Separator />
-                <DetailRow icon={DollarSign} label="Pricing" isLoading={isLoadingDetails}>
-                  {displayDetails.pricing}
+                <DetailRow icon={DollarSign} label="Pricing">
+                  {station.pricing}
                 </DetailRow>
               </CardContent>
             </Card>
@@ -185,6 +156,12 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
           <span className="sr-only">Toggle Favorite</span>
         </Button>
       </div>
+      
+      {station.photoUrl && (
+        <div className="aspect-video w-full relative rounded-lg overflow-hidden border mb-4">
+          <Image src={station.photoUrl} alt={`Photo of ${station.name}`} fill className="object-cover" />
+        </div>
+      )}
 
       <div className="flex items-center gap-4 mb-6">
         <DropdownMenu>
@@ -208,29 +185,30 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
       <ScrollArea className="flex-1 -mx-6">
         <div className="px-6 space-y-6">
           <div className="grid grid-cols-2 gap-6">
-            <DetailRow icon={Info} label="Availability" isLoading={isLoadingDetails}>
-              <Badge 
-                variant={displayDetails.availability.toLowerCase().includes('24/7') ? 'default' : 'secondary'}
-                className={cn(displayDetails.availability.toLowerCase().includes('24/7') ? 'bg-green-100 text-green-800 border-green-200' : '')}
-              >
-                {displayDetails.availability}
+            <DetailRow icon={Users} label="Availability">
+              <Badge variant={station.availability.inUse === 0 ? 'default' : 'secondary'}
+                className={cn(station.availability.inUse === 0 ? 'bg-green-100 text-green-800 border-green-200' : '')}>
+                {station.availability.available} / {station.availability.total} Available
               </Badge>
             </DetailRow>
-            <DetailRow icon={Zap} label="Charging Speed">
-                {station.speed}
+            <DetailRow icon={Zap} label="Max Speed">
+               <div className="flex items-center gap-2">
+                <span className={cn(isFastCharger && "text-green-600 font-bold")}>{maxPower} kW</span>
+                {isFastCharger && <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">DC Fast</Badge>}
+              </div>
             </DetailRow>
-            <DetailRow icon={Network} label="Network" isLoading={isLoadingDetails}>
-              {displayDetails.network}
+            <DetailRow icon={Network} label="Network">
+              {station.network}
             </DetailRow>
-            <DetailRow icon={DollarSign} label="Pricing" isLoading={isLoadingDetails}>
-              {displayDetails.pricing}
+            <DetailRow icon={DollarSign} label="Pricing">
+              {station.pricing}
             </DetailRow>
           </div>
 
           <DetailRow icon={Plug} label="Connectors">
             <div className="flex flex-wrap gap-2">
-              {station.connectorTypes.map((type) => (
-                <Badge key={type} variant="secondary" className="text-base py-1 px-3">{type}</Badge>
+              {station.connectors.map((c, i) => (
+                <Badge key={i} variant="secondary" className="text-base py-1 px-3">{c.type} ({c.powerKw}kW)</Badge>
               ))}
             </div>
           </DetailRow>

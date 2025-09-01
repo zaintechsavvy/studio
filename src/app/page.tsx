@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
-import type { ChargingStation } from '@/lib/types';
+import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import StationDetails from '@/components/voltsage/StationDetails';
@@ -57,7 +57,7 @@ export default function VoltsageApp() {
       if (stationsWithIds.length === 0) {
         toast({
           title: 'No stations found',
-          description: 'Try different coordinates or broaden your search.',
+          description: 'The AI could not find any stations nearby. Try different coordinates.',
         });
       }
     }
@@ -120,14 +120,9 @@ export default function VoltsageApp() {
     
     return currentStations.filter(station => {
       const connectorMatch = filters.connectorTypes.length === 0 || 
-        filters.connectorTypes.some(ct => station.connectorTypes.includes(ct));
+        filters.connectorTypes.some(ct => station.connectors.some(c => c.type === ct));
       
-      let stationMaxPower = 0;
-      if (station.speed.includes('DC Fast')) {
-        stationMaxPower = 150;
-      } else if (station.speed.includes('Level 2')) {
-        stationMaxPower = 7;
-      }
+      const stationMaxPower = Math.max(...station.connectors.map(c => c.powerKw));
       const speedMatch = stationMaxPower >= filters.minSpeed;
       
       return connectorMatch && speedMatch;
@@ -138,9 +133,7 @@ export default function VoltsageApp() {
   const allConnectorTypes = useMemo(() => {
     if (!stations) return [];
     const allTypes = new Set<string>();
-    stations.forEach(s => s.connectorTypes.forEach(ct => {
-      if(ct && ct !== 'Unknown') allTypes.add(ct)
-    }));
+    stations.forEach(s => s.connectors.forEach(c => allTypes.add(c.type)));
     return Array.from(allTypes);
   }, [stations]);
 
