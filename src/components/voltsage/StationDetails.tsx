@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ChargingStation } from '@/ai/flows/find-chargers-flow';
-import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Users, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Users, Link as LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Separator } from '@/components/ui/separator';
-import Image from 'next/image';
 
 interface StationDetailsProps {
   station: ChargingStation;
@@ -48,6 +47,10 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
     const appleMapsUrl = `https://maps.apple.com/?daddr=${station.latitude},${station.longitude}`;
     window.open(appleMapsUrl, '_blank');
   };
+  
+  const handleViewSource = () => {
+    window.open(station.sourceUrl, '_blank');
+  };
 
   const maxPower = Math.max(...station.connectors.map(c => c.powerKw));
   const isFastCharger = maxPower >= 50;
@@ -68,28 +71,29 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
         </div>
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
-            {station.photoUrl && (
-              <div className="aspect-video w-full relative rounded-lg overflow-hidden border">
-                <Image src={station.photoUrl} alt={`Photo of ${station.name}`} fill className="object-cover" />
-              </div>
-            )}
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-full h-12 text-base font-semibold">
-                  <Navigation className="mr-2 h-5 w-5" />
-                  Navigate
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuItem onClick={handleNavigateGoogle} className="text-base py-2">
-                  Google Maps
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleNavigateApple} className="text-base py-2">
-                  Apple Maps
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="grid grid-cols-2 gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="w-full h-12 text-base font-semibold">
+                    <Navigation className="mr-2 h-5 w-5" />
+                    Navigate
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuItem onClick={handleNavigateGoogle} className="text-base py-2">
+                    Google Maps
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleNavigateApple} className="text-base py-2">
+                    Apple Maps
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" className="w-full h-12 text-base font-semibold bg-white/60 border-2 border-transparent hover:border-primary hover:bg-white" onClick={handleViewSource}>
+                <LinkIcon className="mr-2 h-5 w-5" />
+                View Source
+              </Button>
+            </div>
+
 
             <Card className="bg-white/30 border-none shadow-none">
               <CardContent className="p-4 space-y-4">
@@ -156,17 +160,11 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
           <span className="sr-only">Toggle Favorite</span>
         </Button>
       </div>
-      
-      {station.photoUrl && (
-        <div className="aspect-video w-full relative rounded-lg overflow-hidden border mb-4">
-          <Image src={station.photoUrl} alt={`Photo of ${station.name}`} fill className="object-cover" />
-        </div>
-      )}
 
       <div className="flex items-center gap-4 mb-6">
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="w-full h-12 text-base font-semibold">
+              <Button className="flex-1 h-12 text-base font-semibold">
                 <Navigation className="mr-2 h-5 w-5" />
                 Navigate
               </Button>
@@ -180,6 +178,10 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="outline" className="flex-1 h-12 text-base font-semibold" onClick={handleViewSource}>
+            <LinkIcon className="mr-2 h-5 w-5" />
+            View Source
+          </Button>
       </div>
 
       <ScrollArea className="flex-1 -mx-6">

@@ -35,7 +35,7 @@ const ChargingStationSchema = z.object({
   pricing: z.string().describe('A summary of the pricing. For example, "$0.48/kWh" or "Per-minute fees may apply".'),
   connectors: z.array(ConnectorSchema).describe('A list of available connectors at the station.'),
   availability: AvailabilitySchema.describe('The real-time availability of chargers at the station.'),
-  photoUrl: z.string().url().describe('A publicly accessible URL for a photo of the charging station.'),
+  sourceUrl: z.string().url().describe('A publicly accessible URL for the source of the station information (e.g., a PlugShare or ChargePoint page).'),
 });
 
 const FindChargersOutputSchema = z.array(ChargingStationSchema);
@@ -53,10 +53,10 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert assistant for finding EV charging stations.
     Given a latitude and longitude, find the 5 closest, publicly accessible EV charging stations.
     
-    For each station, provide comprehensive details including real-time availability and a photo.
+    For each station, provide comprehensive details including real-time availability.
     - Accurately determine the total number of chargers, how many are available, and how many are in use.
-    - Find a publicly accessible URL for a high-quality photo of the station itself.
-    - If you cannot find a specific piece of information, make a reasonable estimate, but never leave a field blank. For photoUrl, if a real one cannot be found, use a placeholder from picsum.photos.
+    - Find a publicly accessible URL for the source of this station's information, like its page on PlugShare, ChargePoint, or the network's own site.
+    - If you cannot find a specific piece of information, make a reasonable estimate, but never leave a field blank.
 
     Search near: Latitude {{{lat}}}, Longitude {{{lon}}}
     
