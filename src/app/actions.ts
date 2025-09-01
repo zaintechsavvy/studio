@@ -14,12 +14,17 @@ type SearchResult = {
 
 // Geocoding function to convert address to lat/lon
 async function geocodeAddress(address: string): Promise<string | null> {
+  // This API key should be in your .env file
+  const apiKey = process.env.EV_CHARGER_API_KEY;
+  if (!apiKey) {
+    console.error("API key for geocoding is not set.");
+    return null;
+  }
+  
   const url = `https://api.api-ninjas.com/v1/geocoding?query=${encodeURIComponent(address)}`;
   try {
     const response = await fetch(url, {
-      headers: {
-        'X-Api-Key': process.env.EV_CHARGER_API_KEY!,
-      },
+      headers: { 'X-Api-Key': apiKey },
     });
     if (!response.ok) {
         const errorText = await response.text();
@@ -59,19 +64,16 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
   let lon: string;
 
   if (isLatLng) {
-    lat = latLngParts[0].trim();
-    lon = latLngParts[1].trim();
+    [lat, lon] = latLngParts.map(part => part.trim());
   } else {
     // If it's not lat,lon, geocode it
     const coordinates = await geocodeAddress(searchInput);
     if (coordinates) {
-      const [geoLat, geoLon] = coordinates.split(',');
-      lat = geoLat;
-      lon = geoLon;
+      [lat, lon] = coordinates.split(',');
     } else {
       return {
         chargingStations: [],
-        error: `Could not find location for "${validation.data.destination}". Please try different coordinates.`,
+        error: `Could not find location for "${validation.data.destination}". Please try a different search term.`,
       };
     }
   }
