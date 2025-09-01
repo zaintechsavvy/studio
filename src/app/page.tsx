@@ -15,6 +15,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar";
+import IntroScreen from '@/components/voltsage/IntroScreen';
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -24,6 +25,7 @@ export type FilterOptions = {
 };
 
 export default function VoltsageApp() {
+  const [showIntro, setShowIntro] = useState(true);
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,10 +143,18 @@ export default function VoltsageApp() {
     });
 
   }, [stations, activeTab, isFavorite, filters]);
+  
+  const handleContinue = () => {
+    setShowIntro(false);
+  };
+  
+  if (showIntro) {
+    return <IntroScreen onContinue={handleContinue} />;
+  }
 
   return (
      <SidebarProvider>
-      <Sidebar>
+      <Sidebar side="left" collapsible="icon" variant="sidebar">
         <SidebarContent
           stations={displayedStations}
           onSelectStation={handleSelectStation}
@@ -167,7 +177,7 @@ export default function VoltsageApp() {
               isFavorite={isFavorite(selectedStation.id)}
               onToggleFavorite={() => toggleFavorite(selectedStation.id)}
               rating={ratings[selectedStation.id] || 0}
-              onRate={(rating) => onRate(selectedStation.id, rating)}
+              onRate={(rating) => setRating(selectedStation.id, rating)}
             />
           ) : (
             <Welcome />
