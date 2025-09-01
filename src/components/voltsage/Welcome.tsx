@@ -12,7 +12,7 @@ export default function Welcome() {
           Your modern guide to finding the perfect EV charge.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 text-left">
+        <div className="grid grid-cols-1 gap-6 pt-6 text-left">
             <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg text-primary">
                     <Search className="h-5 w-5"/>
