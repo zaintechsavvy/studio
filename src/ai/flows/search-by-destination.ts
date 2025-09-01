@@ -52,9 +52,11 @@ const getChargingStationsTool = ai.defineTool(
     
     let url = 'https://api.api-ninjas.com/v1/evchargers?';
     
-    const latLng = input.query.split(',');
-    if (latLng.length === 2 && !isNaN(parseFloat(latLng[0])) && !isNaN(parseFloat(latLng[1]))) {
-        url += `latitude=${parseFloat(latLng[0])}&longitude=${parseFloat(latLng[1])}&radius=50`;
+    const latLngParts = input.query.split(',');
+    const isLatLng = latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]));
+
+    if (isLatLng) {
+        url += `latitude=${parseFloat(latLngParts[0])}&longitude=${parseFloat(latLngParts[1])}&radius=50`;
     } else {
         url += `address=${encodeURIComponent(input.query)}`;
     }
@@ -97,7 +99,7 @@ const getChargingStationsTool = ai.defineTool(
         
         return {
           name: station.station_name || station.name || 'Unknown Station',
-          address: `${station.address || station.street_address}, ${station.city}, ${station.region || station.state} ${station.zip || ''}`.replace(/, ,/g, ','),
+          address: `${station.street_address || ''}, ${station.city || ''}, ${station.state || ''} ${station.zip || ''}`.replace(/(^, | ,$|, ,)/g, '').trim(),
           latitude: station.latitude,
           longitude: station.longitude,
           network: station.ev_network || 'Unknown',
@@ -106,7 +108,7 @@ const getChargingStationsTool = ai.defineTool(
           availability: station.is_active ? '24/7' : 'Varies',
           pricing: station.ev_pricing || 'Varies',
         };
-      });
+      }).filter((station: any) => station.address);
 
       return { chargingStations };
 
