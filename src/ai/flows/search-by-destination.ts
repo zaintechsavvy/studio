@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SearchByDestinationInputSchema = z.object({
-  destination: z.string().describe('The destination address to search for charging stations near.'),
+  destination: z.string().describe('The destination address to search for charging stations near. Can be an address or "latitude,longitude".'),
 });
 export type SearchByDestinationInput = z.infer<typeof SearchByDestinationInputSchema>;
 
@@ -43,27 +43,82 @@ const getChargingStationsTool = ai.defineTool(
     name: 'getChargingStationsTool',
     description: 'Get a list of EV charging stations near a given location based on real-world data.',
     inputSchema: z.object({
-      query: z.string().describe("The user's search query, which can be a location, address, or point of interest."),
+      query: z.string().describe("The user's search query, which can be a location, address, or point of interest. Can be an address or comma-separated latitude and longitude."),
     }),
     outputSchema: SearchByDestinationOutputSchema,
   },
   async (input) => {
-    // This is a placeholder for a real API call.
-    // In a production application, you would replace this with a call to a service like
-    // the Google Maps Places API or a dedicated EV charging station API
-    // to get real-time, accurate data.
     console.log(`Fetching real stations for query: ${input.query}`);
     
-    // Simulating a real API response with more diverse and realistic data
-    return {
-      chargingStations: [
-        { name: "Downtown Public Library Charger", address: "555 W 5th St, Los Angeles, CA 90013", latitude: 34.0505, longitude: -118.254, network: "Blink", speed: "7kW", connectorTypes: ["J1772"], availability: "1/2 Available", pricing: "$0.49/kWh" },
-        { name: "Grand Park EV Charging", address: "200 N Grand Ave, Los Angeles, CA 90012", latitude: 34.056, longitude: -118.243, network: "EVgo", speed: "50kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "4/4 Available", pricing: "Session fee + $0.30/min" },
-        { name: "The Bloc - Electrify America", address: "700 W 7th St, Los Angeles, CA 90017", latitude: 34.048, longitude: -118.259, network: "Electrify America", speed: "150kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "3/4 Available", pricing: "$0.48/kWh + tax" },
-        { name: "Tesla Supercharger - The Fig", address: "788 S Figueroa St, Los Angeles, CA 90017", latitude: 34.047, longitude: -118.261, network: "Tesla", speed: "250kW", connectorTypes: ["Tesla"], availability: "10/16 Available", pricing: "Varies, check Tesla app" },
-        { name: "Union Station East - EV Connect", address: "801 N Vignes St, Los Angeles, CA 90012", latitude: 34.057, longitude: -118.234, network: "EV Connect", speed: "7.2kW", connectorTypes: ["J1772"], availability: "6/8 Available", pricing: "$1.50/hr for first 4 hours" }
-      ]
-    };
+    let url = 'https://api.api-ninjas.com/v1/evchargers?';
+    
+    const latLng = input.query.split(',');
+    if (latLng.length === 2 && !isNaN(parseFloat(latLng[0])) && !isNaN(parseFloat(latLng[1]))) {
+        url += `latitude=${parseFloat(latLng[0])}&longitude=${parseFloat(latLng[1])}&radius=50000`;
+    } else {
+        url += `address=${encodeURIComponent(input.query)}`;
+    }
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'X-Api-Key': process.env.EV_CHARGER_API_KEY!,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed with status ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
+
+      // Transform the API response to match our ChargingStationSchema
+      const chargingStations = data.map((station: any) => {
+        
+        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types)] : ['Unknown'];
+
+        let speed = "N/A";
+        if (station.ev_dc_fast_num > 0) {
+            speed = "DC Fast";
+        } else if (station.ev_level2_evse_num > 0) {
+            speed = "Level 2";
+        } else if (station.ev_level1_evse_num > 0) {
+            speed = "Level 1";
+        }
+
+        // The API returns kW as a number, let's make it a string like "50kW"
+        // Find the max power available
+        let maxPower = 0;
+        if(station.ev_dc_fast_num > 0 && station.ev_network_web) {
+          // Placeholder, real APIs might provide this
+          maxPower = 150; 
+        } else if (station.ev_level2_evse_num > 0) {
+          maxPower = 7;
+        } else {
+          maxPower = 2;
+        }
+
+        return {
+          name: station.station_name || 'Unknown Station',
+          address: `${station.street_address}, ${station.city}, ${station.state} ${station.zip}`,
+          latitude: station.latitude,
+          longitude: station.longitude,
+          network: station.ev_network || 'Unknown',
+          speed: station.ev_dc_fast_num > 0 ? `${station.ev_dc_fast_num}x DC Fast` : (station.ev_level2_evse_num ? `${station.ev_level2_evse_num}x Level 2`: `Level 1`),
+          connectorTypes: connectorTypes,
+          availability: station.access_days_time || '24/7',
+          pricing: station.ev_pricing || 'Varies',
+        };
+      });
+
+      return { chargingStations };
+
+    } catch (error) {
+      console.error("Failed to fetch charging stations:", error);
+      // Return an empty list in case of an error to avoid crashing the app
+      return { chargingStations: [] };
+    }
   }
 );
 
@@ -86,7 +141,8 @@ const searchByDestinationFlow = ai.defineFlow(
     outputSchema: SearchByDestinationOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    // Directly call the tool with the destination.
+    const result = await getChargingStationsTool({ query: input.destination });
+    return result;
   }
 );
