@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -14,6 +15,7 @@ import {
   SidebarContent as SidebarMainContent,
   SidebarProvider,
   SidebarInset,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import IntroScreen from '@/components/voltsage/IntroScreen';
 
@@ -24,8 +26,7 @@ export type FilterOptions = {
   showAvailable: boolean;
 };
 
-export default function VoltsageApp() {
-  const [showIntro, setShowIntro] = useState(true);
+function VoltsageContent() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +34,7 @@ export default function VoltsageApp() {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { ratings, setRating } = useRatings();
   const [activeTab, setActiveTab] = useState<'nearby' | 'favorites'>('nearby');
+  const { setOpenMobile } = useSidebar();
   
   const [filters, setFilters] = useState<FilterOptions>({
     connectorTypes: [],
@@ -97,7 +99,10 @@ export default function VoltsageApp() {
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-  }, []);
+    if (stationId) {
+      setOpenMobile(false);
+    }
+  }, [setOpenMobile]);
 
   const selectedStation = useMemo(
     () => stations?.find(s => s.id === selectedStationId) ?? null,
@@ -141,19 +146,10 @@ export default function VoltsageApp() {
       
       return connectorMatch && powerMatch && networkMatch && availabilityMatch;
     });
-
   }, [stations, activeTab, isFavorite, filters]);
   
-  const handleContinue = () => {
-    setShowIntro(false);
-  };
-  
-  if (showIntro) {
-    return <IntroScreen onContinue={handleContinue} />;
-  }
-
   return (
-     <SidebarProvider>
+    <>
       <Sidebar side="left" collapsible="icon" variant="sidebar">
         <SidebarContent
           stations={displayedStations}
@@ -184,6 +180,25 @@ export default function VoltsageApp() {
           )}
         </div>
       </SidebarInset>
-    </SidebarProvider>
+    </>
   );
+}
+
+
+export default function VoltsageApp() {
+  const [showIntro, setShowIntro] = useState(true);
+
+  const handleContinue = () => {
+    setShowIntro(false);
+  };
+
+  if (showIntro) {
+    return <IntroScreen onContinue={handleContinue} />;
+  }
+  
+  return (
+    <SidebarProvider>
+      <VoltsageContent />
+    </SidebarProvider>
+  )
 }
