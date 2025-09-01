@@ -55,8 +55,8 @@ const prompt = ai.definePrompt({
     
     For each station, provide comprehensive details including real-time availability.
     - Accurately determine the total number of chargers, how many are available, and how many are in use.
-    - Find a publicly accessible URL for the source of this station's information, like its page on PlugShare, ChargePoint, or the network's own site.
-    - If you cannot find a specific piece of information, make a reasonable estimate, but never leave a field blank.
+    - You MUST find a real, publicly accessible URL for the source of this station's information, like its page on PlugShare, ChargePoint, or the network's own site.
+    - Do NOT invent a URL or use placeholders. If you cannot find a valid source URL, you may leave other fields blank, but the URL must be real.
 
     Search near: Latitude {{{lat}}}, Longitude {{{lon}}}
     
