@@ -8,6 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import Rating from './Rating';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface StationDetailsProps {
   station: ChargingStation;
@@ -30,9 +36,14 @@ const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; l
 
 export default function StationDetails({ station, onBack, isFavorite, onToggleFavorite, rating, onRate }: StationDetailsProps) {
   
-  const handleNavigate = () => {
+  const handleNavigateGoogle = () => {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
     window.open(googleMapsUrl, '_blank');
+  };
+
+  const handleNavigateApple = () => {
+    const appleMapsUrl = `https://maps.apple.com/?daddr=${station.latitude},${station.longitude}`;
+    window.open(appleMapsUrl, '_blank');
   };
 
   return (
@@ -50,10 +61,22 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
       </div>
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          <Button onClick={handleNavigate} className="w-full">
-            <Navigation className="mr-2 h-4 w-4" />
-            Navigate
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-full">
+                <Navigation className="mr-2 h-4 w-4" />
+                Navigate
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuItem onClick={handleNavigateGoogle}>
+                Google Maps
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleNavigateApple}>
+                Apple Maps
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Card>
             <CardContent className="p-0">
               <div className="divide-y">

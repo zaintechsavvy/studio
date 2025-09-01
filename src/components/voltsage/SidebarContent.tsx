@@ -7,19 +7,23 @@ import SearchForm from '@/components/voltsage/SearchForm';
 import StationList from '@/components/voltsage/StationList';
 import StationDetails from '@/components/voltsage/StationDetails';
 import { useRatings } from '@/hooks/use-ratings';
+import type { FilterOptions } from '@/app/page';
 
 interface SidebarContentProps {
   stations: ChargingStation[] | null;
   selectedStation: ChargingStation | null;
   isLoading: boolean;
   isListVisible: boolean;
-  showFavorites: boolean;
+  activeTab: 'nearby' | 'favorites';
   onSearch: (destination: string) => void;
   onSelectStation: (stationId: string) => void;
   onBackToList: () => void;
   isFavorite: (stationId: string) => boolean;
   onToggleFavorite: (stationId: string) => void;
-  onToggleShowFavorites: () => void;
+  onTabChange: (tab: 'nearby' | 'favorites') => void;
+  filters: FilterOptions;
+  onFiltersChange: (filters: FilterOptions) => void;
+  allConnectorTypes: string[];
 }
 
 export default function SidebarContent({
@@ -27,13 +31,16 @@ export default function SidebarContent({
   selectedStation,
   isLoading,
   isListVisible,
-  showFavorites,
+  activeTab,
   onSearch,
   onSelectStation,
   onBackToList,
   isFavorite,
   onToggleFavorite,
-  onToggleShowFavorites,
+  onTabChange,
+  filters,
+  onFiltersChange,
+  allConnectorTypes,
 }: SidebarContentProps) {
   const { ratings, setRating } = useRatings();
 
@@ -83,9 +90,12 @@ export default function SidebarContent({
                 stations={stations}
                 isLoading={isLoading}
                 onSelectStation={onSelectStation}
-                showFavorites={showFavorites}
-                onToggleShowFavorites={onToggleShowFavorites}
+                activeTab={activeTab}
+                onTabChange={onTabChange}
                 isFavorite={isFavorite}
+                filters={filters}
+                onFiltersChange={onFiltersChange}
+                allConnectorTypes={allConnectorTypes}
               />
             </motion.div>
           )}

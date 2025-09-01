@@ -1,13 +1,18 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { SidebarProvider, Sidebar } from '@/components/ui/sidebar';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
 import { useFavorites } from '@/hooks/use-favorites';
+
+export type FilterOptions = {
+  connectorTypes: string[];
+  minSpeed: number;
+};
 
 export default function VoltsageApp() {
   const [stations, setStations] = useState<ChargingStation[] | null>(null);
@@ -16,7 +21,12 @@ export default function VoltsageApp() {
   const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
-  const [showFavorites, setShowFavorites] = useState(false);
+  const [activeTab, setActiveTab] = useState<'nearby' | 'favorites'>('nearby');
+  
+  const [filters, setFilters] = useState<FilterOptions>({
+    connectorTypes: [],
+    minSpeed: 0,
+  });
 
   const handleSearchSubmit = async (destination: string) => {
     if (!destination) return;
@@ -50,6 +60,38 @@ export default function VoltsageApp() {
     }
     setIsLoading(false);
   };
+  
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          handleSearchSubmit(`${latitude}, ${longitude}`);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast({
+            variant: "destructive",
+            title: "Geolocation failed",
+            description: "Could not get your location. Please enter a destination manually.",
+          });
+          // Fallback to a default search or let user search manually
+          if (!stations) {
+            handleSearchSubmit("New York, NY");
+          }
+        }
+      );
+    } else {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser does not support geolocation. Please enter a destination manually.",
+      });
+      // Fallback to a default search
+       if (!stations) {
+          handleSearchSubmit("New York, NY");
+       }
+    }
+  }, []); // Run once on component mount
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
@@ -68,11 +110,30 @@ export default function VoltsageApp() {
   
   const filteredStations = useMemo(() => {
     if (!stations) return null;
-    if (showFavorites) {
-      return stations.filter(station => isFavorite(station.id));
+    let currentStations = stations;
+
+    if (activeTab === 'favorites') {
+      currentStations = stations.filter(station => isFavorite(station.id));
     }
-    return stations;
-  }, [stations, showFavorites, isFavorite]);
+    
+    return currentStations.filter(station => {
+      const connectorMatch = filters.connectorTypes.length === 0 || 
+        filters.connectorTypes.some(ct => station.connectorTypes.includes(ct));
+      
+      const stationSpeed = parseInt(station.speed.replace('kW', ''));
+      const speedMatch = isNaN(stationSpeed) || stationSpeed >= filters.minSpeed;
+      
+      return connectorMatch && speedMatch;
+    });
+
+  }, [stations, activeTab, isFavorite, filters]);
+
+  const allConnectorTypes = useMemo(() => {
+    if (!stations) return [];
+    const allTypes = new Set<string>();
+    stations.forEach(s => s.connectorTypes.forEach(ct => allTypes.add(ct)));
+    return Array.from(allTypes);
+  }, [stations]);
 
   return (
     <SidebarProvider>
@@ -90,8 +151,11 @@ export default function VoltsageApp() {
               onBackToList={handleBackToList}
               isFavorite={isFavorite}
               onToggleFavorite={toggleFavorite}
-              showFavorites={showFavorites}
-              onToggleShowFavorites={() => setShowFavorites(prev => !prev)}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              filters={filters}
+              onFiltersChange={setFilters}
+              allConnectorTypes={allConnectorTypes}
             />
           </div>
         </div>
