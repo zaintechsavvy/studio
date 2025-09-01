@@ -1,6 +1,6 @@
 'use server';
 
-import { searchByDestination, SearchByDestinationOutput } from '@/ai/flows/search-by-destination';
+import { getChargingStations, type ChargingStationData } from '@/services/ev-charger';
 import { z } from 'zod';
 
 const searchSchema = z.object({
@@ -8,13 +8,13 @@ const searchSchema = z.object({
 });
 
 type SearchResult = {
-  chargingStations: SearchByDestinationOutput['chargingStations'];
+  chargingStations: ChargingStationData[];
   error?: string;
 };
 
 // Geocoding function to convert address to lat/lon
 async function geocodeAddress(address: string): Promise<string | null> {
-  const url = `https://api.api-ninjas.com/v1/geocoding?city=${encodeURIComponent(address)}`;
+  const url = `https://api.api-ninjas.com/v1/geocoding?query=${encodeURIComponent(address)}`;
   try {
     const response = await fetch(url, {
       headers: {
@@ -54,11 +54,19 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
   const latLngParts = searchInput.split(',');
   const isLatLng = latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]));
 
-  if (!isLatLng) {
+  let lat: string;
+  let lon: string;
+
+  if (isLatLng) {
+    lat = latLngParts[0];
+    lon = latLngParts[1];
+  } else {
     // If it's not lat,lon, geocode it
     const coordinates = await geocodeAddress(searchInput);
     if (coordinates) {
-      searchInput = coordinates;
+      const [geoLat, geoLon] = coordinates.split(',');
+      lat = geoLat;
+      lon = geoLon;
     } else {
       return {
         chargingStations: [],
@@ -68,10 +76,16 @@ export async function handleSearch(input: { destination: string }): Promise<Sear
   }
   
   try {
-    const result = await searchByDestination({ destination: searchInput });
-    return { chargingStations: result.chargingStations };
+    const result = await getChargingStations({ lat, lon });
+    return { chargingStations: result };
   } catch (error) {
     console.error("Error searching for destination:", error);
+    if (error instanceof Error) {
+       return { 
+         chargingStations: [],
+         error: error.message
+       };
+    }
     return { 
       chargingStations: [],
       error: 'An unexpected error occurred. Please try again.' 
