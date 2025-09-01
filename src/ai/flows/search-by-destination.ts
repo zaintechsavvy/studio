@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SearchByDestinationInputSchema = z.object({
-  destination: z.string().describe('The destination to search for charging stations near. Must be "latitude,longitude".'),
+  destination: z.string().describe('The destination to search for charging stations near. Can be an address or "latitude,longitude".'),
 });
 export type SearchByDestinationInput = z.infer<typeof SearchByDestinationInputSchema>;
 
@@ -43,7 +43,7 @@ const getChargingStationsTool = ai.defineTool(
     name: 'getChargingStationsTool',
     description: 'Get a list of EV charging stations near a given location based on real-world data.',
     inputSchema: z.object({
-      query: z.string().describe("The user's search query as a comma-separated latitude and longitude."),
+      query: z.string().describe("The user's search query, which can be an address or a comma-separated latitude and longitude."),
     }),
     outputSchema: SearchByDestinationOutputSchema,
   },
@@ -51,15 +51,18 @@ const getChargingStationsTool = ai.defineTool(
     console.log(`Fetching real stations for query: ${input.query}`);
     
     const latLngParts = input.query.split(',');
-    if (latLngParts.length !== 2 || isNaN(parseFloat(latLngParts[0])) || isNaN(parseFloat(latLngParts[1]))) {
-      console.error("Invalid query format for getChargingStationsTool. Expected 'lat,lon'.");
-      return { chargingStations: [] };
-    }
+    const isLatLng = latLngParts.length === 2 && !isNaN(parseFloat(latLngParts[0])) && !isNaN(parseFloat(latLngParts[1]));
 
-    const lat = parseFloat(latLngParts[0]);
-    const lon = parseFloat(latLngParts[1]);
-    
-    const url = `https://api.api-ninjas.com/v1/evchargers?lat=${lat}&lon=${lon}&radius=50`;
+    let url: string;
+
+    if (isLatLng) {
+      const lat = latLngParts[0];
+      const lon = latLngParts[1];
+      url = `https://api.api-ninjas.com/v1/evchargers?lat=${lat}&lon=${lon}&radius=50`;
+    } else {
+       // This path might be less reliable, but we keep it for address searches
+      url = `https://api.api-ninjas.com/v1/evchargers?address=${encodeURIComponent(input.query)}&radius=50`;
+    }
     
     try {
       const response = await fetch(url, {
@@ -79,7 +82,7 @@ const getChargingStationsTool = ai.defineTool(
         let connectorTypes: string[] = [];
         if (station.connections && Array.isArray(station.connections)) {
           const types = station.connections.map((c: any) => c.type_name).filter(Boolean);
-          connectorTypes = [...new Set(types as string[])] as string[];
+          connectorTypes = [...new Set(types)] as string[];
         }
         if (connectorTypes.length === 0) {
           connectorTypes.push('Unknown');
@@ -119,6 +122,7 @@ const getChargingStationsTool = ai.defineTool(
   }
 );
 
+
 const searchByDestinationFlow = ai.defineFlow(
   {
     name: 'searchByDestinationFlow',
@@ -126,6 +130,17 @@ const searchByDestinationFlow = ai.defineFlow(
     outputSchema: SearchByDestinationOutputSchema,
   },
   async (input) => {
-    return getChargingStationsTool({ query: input.destination });
+    const llmResponse = await ai.generate({
+      prompt: `Find charging stations for ${input.destination}`,
+      tools: [getChargingStationsTool],
+    });
+
+    const toolResponse = llmResponse.toolRequest?.tool?.response;
+
+    if (toolResponse && typeof toolResponse === 'object' && 'chargingStations' in toolResponse) {
+       return toolResponse as SearchByDestinationOutput;
+    }
+
+    return { chargingStations: [] };
   }
 );
