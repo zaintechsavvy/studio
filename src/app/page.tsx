@@ -6,7 +6,9 @@ import { handleSearch } from '@/app/actions';
 import type { ChargingStation } from '@/lib/types';
 import Header from '@/components/voltsage/Header';
 import SidebarContent from '@/components/voltsage/SidebarContent';
+import StationDetails from '@/components/voltsage/StationDetails';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useRatings } from '@/hooks/use-ratings';
 import Image from 'next/image';
 
 export type FilterOptions = {
@@ -21,6 +23,7 @@ export default function VoltsageApp() {
   const [isListVisible, setIsListVisible] = useState(true);
   const { toast } = useToast();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { ratings, setRating } = useRatings();
   const [activeTab, setActiveTab] = useState<'nearby' | 'favorites'>('nearby');
   
   const [filters, setFilters] = useState<FilterOptions>({
@@ -73,9 +76,8 @@ export default function VoltsageApp() {
           toast({
             variant: "destructive",
             title: "Geolocation failed",
-            description: "Could not get your location. Please enter coordinates manually.",
+            description: "Could not get your location. Please enter a location manually.",
           });
-          // Fallback search fails if no default is provided. Let user search manually.
           setIsLoading(false);
           setStations([]);
         },
@@ -88,9 +90,8 @@ export default function VoltsageApp() {
     } else {
       toast({
         title: "Geolocation not supported",
-        description: "Your browser does not support geolocation. Please enter coordinates manually.",
+        description: "Your browser does not support geolocation. Please enter a location manually.",
       });
-      // Fallback search fails if no default is provided. Let user search manually.
       setIsLoading(false);
       setStations([]);
     }
@@ -123,7 +124,7 @@ export default function VoltsageApp() {
       
       let stationMaxPower = 0;
       if (station.speed.includes('DC Fast')) {
-        stationMaxPower = 150; // Approximation
+        stationMaxPower = 150;
       } else if (station.speed.includes('Level 2')) {
         stationMaxPower = 7;
       }
@@ -158,7 +159,6 @@ export default function VoltsageApp() {
         <div className="relative z-10 flex flex-1 overflow-hidden p-4">
           <div className="flex w-full h-full max-h-full">
             
-            {/* Sidebar */}
             <div className="w-full max-w-sm shrink-0 h-full">
               <div className="glass-card flex flex-col h-full">
                 <SidebarContent
@@ -179,11 +179,22 @@ export default function VoltsageApp() {
                 />
               </div>
             </div>
-
-            {/* Main content placeholder */}
+            
             <div className="flex-1 ml-4 h-full hidden md:flex">
-              <div className="glass-card w-full h-full flex items-center justify-center">
-                <Header />
+              <div className="glass-card w-full h-full flex items-center justify-center overflow-hidden">
+                {selectedStation ? (
+                   <StationDetails
+                      station={selectedStation}
+                      onBack={handleBackToList}
+                      isFavorite={isFavorite(selectedStation.id)}
+                      onToggleFavorite={() => toggleFavorite(selectedStation.id)}
+                      rating={ratings[selectedStation.id] || 0}
+                      onRate={(rating) => setRating(selectedStation.id, rating)}
+                      isPillVariant={false}
+                    />
+                ) : (
+                  <Header />
+                )}
               </div>
             </div>
           </div>

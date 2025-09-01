@@ -23,6 +23,7 @@ interface StationDetailsProps {
   onToggleFavorite: () => void;
   rating: number;
   onRate: (rating: number) => void;
+  isPillVariant?: boolean;
 }
 
 const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) => (
@@ -35,7 +36,7 @@ const DetailRow = ({ icon: Icon, label, children }: { icon: React.ElementType; l
   </div>
 );
 
-export default function StationDetails({ station, onBack, isFavorite, onToggleFavorite, rating, onRate }: StationDetailsProps) {
+export default function StationDetails({ station, onBack, isFavorite, onToggleFavorite, rating, onRate, isPillVariant = true }: StationDetailsProps) {
   
   const handleNavigateGoogle = () => {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
@@ -47,22 +48,106 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
     window.open(appleMapsUrl, '_blank');
   };
 
+  if (isPillVariant) {
+    return (
+      <div className="flex h-full flex-col bg-transparent">
+        <div className="flex items-center gap-2 border-b border-white/20 p-4">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-full">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Back</span>
+          </Button>
+          <h3 className="text-lg font-semibold tracking-tight truncate flex-1">{station.name}</h3>
+          <Button variant="ghost" size="icon" onClick={onToggleFavorite} className="shrink-0 h-10 w-10 rounded-full">
+            <Heart className={cn("h-5 w-5 text-muted-foreground", isFavorite && "text-red-500 fill-current")} />
+            <span className="sr-only">Toggle Favorite</span>
+          </Button>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full h-12 text-base font-semibold">
+                  <Navigation className="mr-2 h-5 w-5" />
+                  Navigate
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuItem onClick={handleNavigateGoogle} className="text-base py-2">
+                  Google Maps
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleNavigateApple} className="text-base py-2">
+                  Apple Maps
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Card className="bg-white/30 border-none shadow-none">
+              <CardContent className="p-4 space-y-4">
+                <DetailRow icon={MapPin} label="Address">
+                  {station.address}
+                </DetailRow>
+                <Separator />
+                <DetailRow icon={Info} label="Availability">
+                  <Badge 
+                    variant={station.availability.toLowerCase().includes('24/7') ? 'default' : 'secondary'}
+                    className={cn(station.availability.toLowerCase().includes('24/7') ? 'bg-green-100 text-green-800 border-green-200' : '')}
+                  >
+                    {station.availability}
+                  </Badge>
+                </DetailRow>
+                <Separator />
+                <DetailRow icon={Zap} label="Charging Speed">
+                    {station.speed}
+                </DetailRow>
+                <Separator />
+                <DetailRow icon={Plug} label="Connectors">
+                  <div className="flex flex-wrap gap-2">
+                    {station.connectorTypes.map((type) => (
+                      <Badge key={type} variant="secondary" className="text-base py-1 px-3">{type}</Badge>
+                    ))}
+                  </div>
+                </DetailRow>
+                <Separator />
+                <DetailRow icon={Network} label="Network">
+                  {station.network}
+                </DetailRow>
+                <Separator />
+                <DetailRow icon={DollarSign} label="Pricing">
+                  {station.pricing}
+                </DetailRow>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/30 border-none shadow-none">
+              <CardHeader>
+                <CardTitle>Rate this Station</CardTitle>
+                <CardDescription>Help others by sharing your experience.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Rating currentRating={rating} onRate={onRate} />
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col bg-transparent">
-      <div className="flex items-center gap-2 border-b border-white/20 p-4">
-        <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-full">
-          <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Back</span>
-        </Button>
-        <h3 className="text-lg font-semibold tracking-tight truncate flex-1">{station.name}</h3>
+    <div className="w-full h-full flex flex-col p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">{station.name}</h2>
+          <p className="text-muted-foreground">{station.address}</p>
+        </div>
         <Button variant="ghost" size="icon" onClick={onToggleFavorite} className="shrink-0 h-10 w-10 rounded-full">
-          <Heart className={cn("h-5 w-5 text-muted-foreground", isFavorite && "text-red-500 fill-current")} />
+          <Heart className={cn("h-6 w-6 text-muted-foreground", isFavorite && "text-red-500 fill-current")} />
           <span className="sr-only">Toggle Favorite</span>
         </Button>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
-          <DropdownMenu>
+
+      <div className="flex items-center gap-4 mb-6">
+        <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="w-full h-12 text-base font-semibold">
                 <Navigation className="mr-2 h-5 w-5" />
@@ -78,44 +163,38 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+      </div>
 
-          <Card className="bg-white/30 border-none shadow-none">
-            <CardContent className="p-4 space-y-4">
-              <DetailRow icon={MapPin} label="Address">
-                {station.address}
-              </DetailRow>
-              <Separator />
-               <DetailRow icon={Info} label="Availability">
-                <Badge 
-                  variant={station.availability.toLowerCase().includes('24/7') ? 'default' : 'secondary'}
-                  className={cn(station.availability.toLowerCase().includes('24/7') ? 'bg-green-100 text-green-800 border-green-200' : '')}
-                >
-                  {station.availability}
-                </Badge>
-              </DetailRow>
-              <Separator />
-              <DetailRow icon={Zap} label="Charging Speed">
-                  {station.speed}
-              </DetailRow>
-              <Separator />
-              <DetailRow icon={Plug} label="Connectors">
-                <div className="flex flex-wrap gap-2">
-                  {station.connectorTypes.map((type) => (
-                    <Badge key={type} variant="secondary" className="text-base py-1 px-3">{type}</Badge>
-                  ))}
-                </div>
-              </DetailRow>
-              <Separator />
-               <DetailRow icon={Network} label="Network">
-                {station.network}
-              </DetailRow>
-              <Separator />
-               <DetailRow icon={DollarSign} label="Pricing">
-                {station.pricing}
-              </DetailRow>
-            </CardContent>
-          </Card>
+      <ScrollArea className="flex-1 -mx-6">
+        <div className="px-6 space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <DetailRow icon={Info} label="Availability">
+              <Badge 
+                variant={station.availability.toLowerCase().includes('24/7') ? 'default' : 'secondary'}
+                className={cn(station.availability.toLowerCase().includes('24/7') ? 'bg-green-100 text-green-800 border-green-200' : '')}
+              >
+                {station.availability}
+              </Badge>
+            </DetailRow>
+            <DetailRow icon={Zap} label="Charging Speed">
+                {station.speed}
+            </DetailRow>
+            <DetailRow icon={Network} label="Network">
+              {station.network}
+            </DetailRow>
+            <DetailRow icon={DollarSign} label="Pricing">
+              {station.pricing}
+            </DetailRow>
+          </div>
 
+          <DetailRow icon={Plug} label="Connectors">
+            <div className="flex flex-wrap gap-2">
+              {station.connectorTypes.map((type) => (
+                <Badge key={type} variant="secondary" className="text-base py-1 px-3">{type}</Badge>
+              ))}
+            </div>
+          </DetailRow>
+          
           <Card className="bg-white/30 border-none shadow-none">
             <CardHeader>
               <CardTitle>Rate this Station</CardTitle>

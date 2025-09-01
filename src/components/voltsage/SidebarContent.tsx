@@ -48,6 +48,8 @@ export default function SidebarContent({
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: 30 },
   };
+  
+  const showDetailsInSidebar = isListVisible === false && !!selectedStation;
 
   return (
     <div className="flex flex-col h-full">
@@ -56,7 +58,7 @@ export default function SidebarContent({
       </div>
       <div className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
-          {selectedStation ? (
+          {showDetailsInSidebar ? (
             <motion.div
               key="details"
               variants={animationVariants}
@@ -73,6 +75,7 @@ export default function SidebarContent({
                 onToggleFavorite={() => onToggleFavorite(selectedStation.id)}
                 rating={ratings[selectedStation.id] || 0}
                 onRate={(rating) => setRating(selectedStation.id, rating)}
+                isPillVariant={true}
               />
             </motion.div>
           ) : (
