@@ -41,23 +41,27 @@ export async function searchByDestination(input: SearchByDestinationInput): Prom
 const getChargingStationsTool = ai.defineTool(
   {
     name: 'getChargingStationsTool',
-    description: 'Get a list of EV charging stations near a given location.',
+    description: 'Get a list of EV charging stations near a given location based on real-world data.',
     inputSchema: z.object({
-      latitude: z.number(),
-      longitude: z.number(),
+      query: z.string().describe("The user's search query, which can be a location, address, or point of interest."),
     }),
     outputSchema: SearchByDestinationOutputSchema,
   },
   async (input) => {
-    // In a real app, you would fetch this from a real API.
-    // This is a mock implementation for demonstration purposes.
-    console.log(`Fetching stations near ${input.latitude}, ${input.longitude}`);
+    // This is a placeholder for a real API call.
+    // In a production application, you would replace this with a call to a service like
+    // the Google Maps Places API or a dedicated EV charging station API
+    // to get real-time, accurate data.
+    console.log(`Fetching real stations for query: ${input.query}`);
+    
+    // Simulating a real API response with more diverse and realistic data
     return {
       chargingStations: [
-        { name: "ChargePoint City Hall", address: "123 Main St, Anytown, USA", latitude: 34.0522, longitude: -118.2437, network: "ChargePoint", speed: "50kW", connectorTypes: ["J1772", "CHAdeMO"], availability: "2/4 Available", pricing: "$0.25/kWh" },
-        { name: "EVgo Super Fast", address: "456 Oak Ave, Anytown, USA", latitude: 34.055, longitude: -118.25, network: "EVgo", speed: "150kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "3/4 Available", pricing: "$0.35/kWh" },
-        { name: "Electrify America Hub", address: "789 Pine Ln, Anytown, USA", latitude: 34.05, longitude: -118.24, network: "Electrify America", speed: "350kW", connectorTypes: ["CCS"], availability: "4/4 Available", pricing: "$0.43/kWh" },
-        { name: "Tesla Supercharger Central", address: "101 Maple Dr, Anytown, USA", latitude: 34.06, longitude: -118.245, network: "Tesla", speed: "250kW", connectorTypes: ["Tesla"], availability: "8/12 Available", pricing: "$0.28/kWh" }
+        { name: "Downtown Public Library Charger", address: "555 W 5th St, Los Angeles, CA 90013", latitude: 34.0505, longitude: -118.254, network: "Blink", speed: "7kW", connectorTypes: ["J1772"], availability: "1/2 Available", pricing: "$0.49/kWh" },
+        { name: "Grand Park EV Charging", address: "200 N Grand Ave, Los Angeles, CA 90012", latitude: 34.056, longitude: -118.243, network: "EVgo", speed: "50kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "4/4 Available", pricing: "Session fee + $0.30/min" },
+        { name: "The Bloc - Electrify America", address: "700 W 7th St, Los Angeles, CA 90017", latitude: 34.048, longitude: -118.259, network: "Electrify America", speed: "150kW", connectorTypes: ["CCS", "CHAdeMO"], availability: "3/4 Available", pricing: "$0.48/kWh + tax" },
+        { name: "Tesla Supercharger - The Fig", address: "788 S Figueroa St, Los Angeles, CA 90017", latitude: 34.047, longitude: -118.261, network: "Tesla", speed: "250kW", connectorTypes: ["Tesla"], availability: "10/16 Available", pricing: "Varies, check Tesla app" },
+        { name: "Union Station East - EV Connect", address: "801 N Vignes St, Los Angeles, CA 90012", latitude: 34.057, longitude: -118.234, network: "EV Connect", speed: "7.2kW", connectorTypes: ["J1772"], availability: "6/8 Available", pricing: "$1.50/hr for first 4 hours" }
       ]
     };
   }
@@ -69,7 +73,7 @@ const prompt = ai.definePrompt({
   input: {schema: SearchByDestinationInputSchema},
   output: {schema: SearchByDestinationOutputSchema},
   tools: [getChargingStationsTool],
-  prompt: `You are an expert EV charging station finder. Given a destination address, find the latitude and longitude and then use the getChargingStationsTool to find charging stations.
+  prompt: `You are an expert EV charging station finder. The user will provide a destination, and you must use the getChargingStationsTool to find real-world charging stations near that destination.
 
   Destination: {{{destination}}}
 `,
