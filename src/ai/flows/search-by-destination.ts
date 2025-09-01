@@ -54,7 +54,7 @@ const getChargingStationsTool = ai.defineTool(
     
     const latLng = input.query.split(',');
     if (latLng.length === 2 && !isNaN(parseFloat(latLng[0])) && !isNaN(parseFloat(latLng[1]))) {
-        url += `latitude=${parseFloat(latLng[0])}&longitude=${parseFloat(latLng[1])}&radius=50000`;
+        url += `latitude=${parseFloat(latLng[0])}&longitude=${parseFloat(latLng[1])}&radius=50`;
     } else {
         url += `address=${encodeURIComponent(input.query)}`;
     }
@@ -76,7 +76,10 @@ const getChargingStationsTool = ai.defineTool(
       // Transform the API response to match our ChargingStationSchema
       const chargingStations = data.map((station: any) => {
         
-        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types)].filter(Boolean) : ['Unknown'];
+        const connectorTypes = station.ev_connector_types ? [...new Set(station.ev_connector_types.filter(Boolean))] : ['Unknown'];
+        if (connectorTypes.length === 0) {
+          connectorTypes.push('Unknown');
+        }
 
         let speed = "N/A";
         if (station.ev_dc_fast_num > 0) {
@@ -129,8 +132,27 @@ const searchByDestinationFlow = ai.defineFlow(
     outputSchema: SearchByDestinationOutputSchema,
   },
   async input => {
-    // Directly call the tool with the destination.
-    const result = await getChargingStationsTool({ query: input.destination });
-    return result;
+    const llmResponse = await prompt(input);
+    const toolCalls = llmResponse.toolCalls();
+
+    if (toolCalls.length === 0) {
+      // This case should be handled based on what is expected.
+      // Maybe the model decided no tool call was necessary.
+      // For this app, we'll assume a tool call is always needed.
+      // And if not, we return empty.
+      return { chargingStations: [] };
+    }
+    
+    // In this specific flow, we expect one tool call to getChargingStationsTool
+    const toolCall = toolCalls[0];
+    if (toolCall.tool !== 'getChargingStationsTool') {
+       return { chargingStations: [] };
+    }
+    
+    // We can now execute the tool call.
+    const toolResult = await toolCall.execute();
+
+    // In this case, the tool's output schema matches our flow's output schema, so we can return it directly.
+    return toolResult as SearchByDestinationOutput;
   }
 );
