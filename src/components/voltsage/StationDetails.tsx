@@ -45,6 +45,8 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
     const appleMapsUrl = `https://maps.apple.com/?daddr=${station.latitude},${station.longitude}`;
     window.open(appleMapsUrl, '_blank');
   };
+  
+  const availabilityColor = station.availability.toLowerCase().includes('avail') ? 'bg-green-600' : 'bg-red-600';
 
   return (
     <div className="flex h-full flex-col">
@@ -86,7 +88,7 @@ export default function StationDetails({ station, onBack, isFavorite, onToggleFa
                 <DetailRow icon={Zap} label="Charging Speed">
                   <div className="flex items-center gap-2">
                     <span>{station.speed}</span>
-                    <Badge variant={station.availability.toLowerCase().includes('avail') ? 'default' : 'destructive'} className="bg-green-500 text-white">
+                    <Badge className={cn("text-white", availabilityColor)}>
                       {station.availability}
                     </Badge>
                   </div>
