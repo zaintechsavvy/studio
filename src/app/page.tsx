@@ -18,6 +18,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import IntroScreen from '@/components/voltsage/IntroScreen';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export type FilterOptions = {
   connectorTypes: string[];
@@ -35,6 +36,7 @@ function VoltsageContent() {
   const { ratings, setRating } = useRatings();
   const [activeTab, setActiveTab] = useState<'nearby' | 'favorites'>('nearby');
   const { setOpenMobile } = useSidebar();
+  const isMobile = useIsMobile();
   
   const [filters, setFilters] = useState<FilterOptions>({
     connectorTypes: [],
@@ -99,10 +101,10 @@ function VoltsageContent() {
 
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-    if (stationId) {
+    if (stationId && isMobile) {
       setOpenMobile(false);
     }
-  }, [setOpenMobile]);
+  }, [setOpenMobile, isMobile]);
 
   const selectedStation = useMemo(
     () => stations?.find(s => s.id === selectedStationId) ?? null,
@@ -176,7 +178,7 @@ function VoltsageContent() {
               onRate={(rating) => setRating(selectedStation.id, rating)}
             />
           ) : (
-            <Welcome />
+            !isMobile && <Welcome />
           )}
         </div>
       </SidebarInset>
