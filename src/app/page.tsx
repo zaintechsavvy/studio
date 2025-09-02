@@ -12,10 +12,8 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useRatings } from '@/hooks/use-ratings';
 import {
   Sidebar,
-  SidebarContent as SidebarMainContent,
-  SidebarProvider,
   SidebarInset,
-  useSidebar,
+  SidebarProvider,
 } from "@/components/ui/sidebar";
 import IntroScreen from '@/components/voltsage/IntroScreen';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,7 +33,6 @@ function VoltsageContent() {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { ratings, setRating } = useRatings();
   const [activeTab, setActiveTab] = useState<'nearby' | 'favorites'>('nearby');
-  const { setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
   
   const [filters, setFilters] = useState<FilterOptions>({
@@ -74,6 +71,11 @@ function VoltsageContent() {
   }, [toast]);
   
   useEffect(() => {
+    // Set a default search if geolocation is not available or denied
+    const performDefaultSearch = () => {
+      handleSearchSubmit('37.7749,-122.4194'); // Default to San Francisco
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -87,7 +89,7 @@ function VoltsageContent() {
             title: "Geolocation failed",
             description: "Could not get your location. Searching default location.",
           });
-          handleSearchSubmit('37.7749,-122.4194'); // Default to San Francisco
+          performDefaultSearch();
         }
       );
     } else {
@@ -95,16 +97,18 @@ function VoltsageContent() {
         title: "Geolocation not supported",
         description: "Your browser does not support geolocation. Searching default location.",
       });
-      handleSearchSubmit('37.7749,-122.4194'); // Default to San Francisco
+      performDefaultSearch();
     }
   }, [handleSearchSubmit, toast]);
 
+
   const handleSelectStation = useCallback((stationId: string | null) => {
     setSelectedStationId(stationId);
-    if (stationId && isMobile) {
-      setOpenMobile(false);
-    }
-  }, [setOpenMobile, isMobile]);
+  }, []);
+  
+  const handleBackToList = useCallback(() => {
+    setSelectedStationId(null);
+  }, []);
 
   const selectedStation = useMemo(
     () => stations?.find(s => s.id === selectedStationId) ?? null,
@@ -150,22 +154,42 @@ function VoltsageContent() {
     });
   }, [stations, activeTab, isFavorite, filters]);
   
+  const sidebarContent = (
+    <SidebarContent
+      stations={displayedStations}
+      onSelectStation={handleSelectStation}
+      isLoading={isLoading}
+      onSearch={handleSearchSubmit}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      filters={filters}
+      onFiltersChange={setFilters}
+      allConnectorTypes={allConnectorTypes}
+      allNetworks={allNetworks}
+      selectedStationId={selectedStationId}
+    />
+  );
+  
+  if (isMobile) {
+    if (selectedStation) {
+      return (
+        <StationDetails
+          station={selectedStation}
+          isFavorite={isFavorite(selectedStation.id)}
+          onToggleFavorite={() => toggleFavorite(selectedStation.id)}
+          rating={ratings[selectedStation.id] || 0}
+          onRate={(rating) => setRating(selectedStation.id, rating)}
+          onBack={handleBackToList}
+        />
+      );
+    }
+    return sidebarContent;
+  }
+  
   return (
     <>
       <Sidebar side="left" collapsible="icon" variant="sidebar">
-        <SidebarContent
-          stations={displayedStations}
-          onSelectStation={handleSelectStation}
-          isLoading={isLoading}
-          onSearch={handleSearchSubmit}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          filters={filters}
-          onFiltersChange={setFilters}
-          allConnectorTypes={allConnectorTypes}
-          allNetworks={allNetworks}
-          selectedStationId={selectedStationId}
-        />
+        {sidebarContent}
       </Sidebar>
       <SidebarInset>
         <div className="h-dvh flex-1 overflow-y-auto">
@@ -178,7 +202,7 @@ function VoltsageContent() {
               onRate={(rating) => setRating(selectedStation.id, rating)}
             />
           ) : (
-            !isMobile && <Welcome />
+            <Welcome />
           )}
         </div>
       </SidebarInset>
@@ -204,3 +228,5 @@ export default function VoltsageApp() {
     </SidebarProvider>
   )
 }
+
+    

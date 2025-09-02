@@ -1,9 +1,10 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ChargingStation } from '@/lib/types';
-import { Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Clock, Building, Info, ExternalLink } from 'lucide-react';
+import { Heart, MapPin, Network, Plug, Zap, DollarSign, Navigation, Clock, Building, Info, ExternalLink, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,7 @@ interface StationDetailsProps {
   onToggleFavorite: () => void;
   rating: number;
   onRate: (rating: number) => void;
+  onBack?: () => void;
 }
 
 const DetailRow = ({ icon: Icon, label, children, labelClass }: { icon: React.ElementType; label: string; children: React.ReactNode; labelClass?: string }) => (
@@ -28,7 +30,7 @@ const DetailRow = ({ icon: Icon, label, children, labelClass }: { icon: React.El
   </div>
 );
 
-export default function StationDetails({ station, isFavorite, onToggleFavorite, rating, onRate }: StationDetailsProps) {
+export default function StationDetails({ station, isFavorite, onToggleFavorite, rating, onRate, onBack }: StationDetailsProps) {
   
   const handleNavigate = () => {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
@@ -45,27 +47,32 @@ export default function StationDetails({ station, isFavorite, onToggleFavorite, 
 
   return (
     <div className="flex h-dvh flex-col bg-background">
+      <header className="flex items-center gap-4 p-4 border-b sticky top-0 bg-background/80 backdrop-blur-sm z-10">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden">
+            <ArrowLeft className="h-6 w-6" />
+            <span className="sr-only">Back to list</span>
+          </Button>
+        )}
+        <h1 className="text-xl font-bold tracking-tight text-foreground truncate">{station.name}</h1>
+        <Button variant="ghost" size="icon" onClick={onToggleFavorite} className="shrink-0 h-11 w-11 rounded-full ml-auto">
+          <Heart className={cn("h-6 w-6 text-muted-foreground", isFavorite && "text-red-500 fill-current")} />
+          <span className="sr-only">Toggle Favorite</span>
+        </Button>
+      </header>
+
       <ScrollArea className="flex-1">
         <div className="p-6 md:p-8 lg:p-12 space-y-8">
-            <header className="space-y-4">
-                <div className="flex justify-between items-start gap-4">
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground">{station.name}</h1>
-                    <Button variant="ghost" size="icon" onClick={onToggleFavorite} className="shrink-0 h-12 w-12 rounded-full">
-                        <Heart className={cn("h-7 w-7 text-muted-foreground", isFavorite && "text-red-500 fill-current")} />
-                        <span className="sr-only">Toggle Favorite</span>
-                    </Button>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                    <Button className="h-12 text-base font-semibold px-6" onClick={handleNavigate}>
-                        <Navigation className="mr-2 h-5 w-5" />
-                        Navigate
-                    </Button>
-                    <Button variant="outline" className="h-12 text-base font-semibold px-6" onClick={handleViewSource} disabled={!station.sourceUrl}>
-                        <ExternalLink className="mr-2 h-5 w-5" />
-                        View Source
-                    </Button>
-                </div>
-            </header>
+            <div className="flex flex-wrap gap-4">
+                <Button className="h-12 text-base font-semibold px-6 flex-grow md:flex-grow-0" onClick={handleNavigate}>
+                    <Navigation className="mr-2 h-5 w-5" />
+                    Navigate
+                </Button>
+                <Button variant="outline" className="h-12 text-base font-semibold px-6 flex-grow md:flex-grow-0" onClick={handleViewSource} disabled={!station.sourceUrl}>
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    View Source
+                </Button>
+            </div>
 
             <Card className="shadow-lg border-2">
                 <CardContent className="p-2 md:p-4">
@@ -127,3 +134,5 @@ export default function StationDetails({ station, isFavorite, onToggleFavorite, 
     </div>
   );
 }
+
+    
